@@ -108,6 +108,8 @@ def test_onehot_rotator():
 def test_phase_interp():
     """ Phase Interpolator Test(s) """
 
+    from hdl21.primitives import Vpulse, Vdc
+
     @h.paramclass
     class QclkParams:
         """ Quadrature Clock Generator Parameters """
@@ -123,16 +125,13 @@ def test_phase_interp():
         """ # Quadrature Clock Generator 
         For simulation, from ideal pulse voltage sources """
 
-        from hdl21.primitives import Vpulse
-
-        def pidx(idx: int) -> Vpulse.Params:
-            """ Create the delay-value for quadrature index `idx`, valued 0-3. 
+        def phpars(idx: int) -> Vpulse.Params:
+            """ Closure to create the delay-value for quadrature index `idx`, valued 0-3. 
             Transitions start at 1/8 of a period, so that clocks are stable during time zero. """
 
             # Delays per phase, in eights of a period.
             # Note the negative values set `val2` as active during simulation time zero.
             vals = [1, 3, -3, -1]
-            # vals = {0: 1, 1: 3, 2: -3, 3: -1}
             if idx < 0 or idx > 3:
                 raise ValueError
 
@@ -152,22 +151,31 @@ def test_phase_interp():
         ckg.ckq = ckq = QuadClock(
             role=QuadClock.Roles.SINK, port=True, desc="Quadrature Clock Output"
         )
-        ckg.v0 = Vpulse(pidx(0))(p=ckq.ck0, n=VSS)
-        ckg.v90 = Vpulse(pidx(1))(p=ckq.ck90, n=VSS)
-        ckg.v180 = Vpulse(pidx(2))(p=ckq.ck180, n=VSS)
-        ckg.v270 = Vpulse(pidx(3))(p=ckq.ck270, n=VSS)
+        ckg.v0 = Vpulse(phpars(0))(p=ckq.ck0, n=VSS)
+        ckg.v90 = Vpulse(phpars(1))(p=ckq.ck90, n=VSS)
+        ckg.v180 = Vpulse(phpars(2))(p=ckq.ck180, n=VSS)
+        ckg.v270 = Vpulse(phpars(3))(p=ckq.ck270, n=VSS)
         return ckg
 
     from hdl21.prefix import m, p, n
 
     tb = h.sim.tb("PhaseInterpTb")
     tb.ckq = ckq = QuadClock()
-    ckp = QclkParams(period=2 * n, delay=0 * p, v1=0 * m, v2=1800 * m, trf=200 * p)
+    ckp = QclkParams(period=2 * n, delay=0 * p, v1=0 * m, v2=1800 * m, trf=100 * p)
     tb.ckgen = QuadClockGen(ckp)(ckq=ckq, VSS=tb.VSS)
-    # tb.dut = PhaseInterp(nbits=5)()
 
-    sim = Sim(tb=tb)
-    sim.tran(tstop=10 * n, name="FOR_GODS_SAKE")
+    tb.VDD = h.Signal()
+    tb.vvdd = Vdc(Vdc.Params(dc=1800 * m))(p=tb.VDD, n=tb.VSS)
+
+    tb.sel = h.Signal(width=5)
+    tb.dck = h.Signal(width=1)
+    tb.dut = PhaseInterp(nbits=5)(
+        VDD=tb.VDD, VSS=tb.VSS, ckq=tb.ckq, sel=tb.sel, out=tb.dck
+    )
+
+    sim = Sim(tb=tb, attrs=s130.install.include(Corner.TYP))
+    sim.include("scs130lp.sp")  # FIXME! relies on this netlist of logic cells
+    sim.tran(tstop=50 * n, name="FOR_GODS_SAKE_MAKE_NO_NAME_WORK")
     results = sim.run(sim_options)
     print(results)
 

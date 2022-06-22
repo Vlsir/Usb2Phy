@@ -10,6 +10,38 @@ from enum import Enum, auto
 import hdl21 as h
 
 
+@h.bundle
+class Diff:
+    """ Differential Bundle """
+
+    class Roles(Enum):
+        SOURCE = auto()
+        SINK = auto()
+
+    p, n = h.Signals(2, src=Roles.SOURCE, dest=Roles.SINK)
+
+
+@h.bundle
+class QuadClock:
+    """ # Quadrature Clock Bundle 
+    Includes four 90-degree-separated phases. """
+
+    class Roles(Enum):
+        # Clock roles: source or sink
+        SOURCE = auto()
+        SINK = auto()
+
+    # The four quadrature phases, all driven by SOURCE and consumed by SINK.
+    ck0, ck90, ck180, ck270 = h.Signals(4, src=Roles.SOURCE, dest=Roles.SINK)
+
+
+@h.paramclass
+class Width:
+    """ Parameter class for Generators with a single integer-valued `width` parameter. """
+
+    width = h.Param(dtype=int, desc="Parametric Width", default=1)
+
+
 """ 
 # Generic Wrappers 
 """
@@ -46,6 +78,8 @@ def wrap(wrapper_name: str, wrapped_name: str, ports: Dict[str, str]) -> h.Modul
 
 # Wrapped Foundry / PDK Cells
 Inv = wrap("Inv", "scs130lp_inv_2", ports={"i": "A", "z": "Y"})
+Or2 = wrap("Or2", "scs130lp_or2_1", ports={"a": "A", "b": "B", "z": "X"})
+Or3 = wrap("Or3", "scs130lp_or3_1", ports={"a": "A", "b": "B", "c": "C", "z": "X"})
 And2 = wrap("And2", "scs130lp_and2_1", ports={"a": "A", "b": "B", "z": "X"})
 And3 = wrap("And3", "scs130lp_and3_1", ports={"a": "A", "b": "B", "c": "C", "z": "X"})
 FlopResetLow = wrap(
@@ -63,17 +97,6 @@ FlopResetHigh = wrap(
 Generic External Modules 
 """
 
-TriInv = h.ExternalModule(
-    name="TriInv",
-    port_list=[
-        h.Input(name="i"),
-        h.Input(name="en"),
-        h.Output(name="z"),
-        h.Port(name="VDD"),
-        h.Port(name="VSS"),
-    ],
-    desc="Generic Tri-State Inverter",
-)
 Flop = h.ExternalModule(
     name="Flop",
     port_list=[
@@ -98,31 +121,54 @@ Latch = h.ExternalModule(
 )
 
 
-@h.bundle
-class QuadClock:
-    """ # Quadrature Clock Bundle 
-    Includes four 90-degree-separated phases. """
-
-    class Roles(Enum):
-        # Clock roles: source or sink
-        SOURCE = auto()
-        SINK = auto()
-
-    # The four quadrature phases, all driven by SOURCE and consumed by SINK.
-    ck0, ck90, ck180, ck270 = h.Signals(4, src=Roles.SOURCE, dest=Roles.SINK)
-
-
 @h.paramclass
 class WeightInvParams:
     weight = h.Param(dtype=int, desc="Weight")
 
 
-WeightInv = h.ExternalModule(
-    name="WeightInv",
-    port_list=[h.Input(name="i"), h.Output(name="z"),],
-    desc="Weighting Inverter",
-    paramtype=WeightInvParams,
-)
+@h.generator
+def WeightInv(p: WeightInvParams) -> h.Module:
+    import s130
+    from s130 import MosParams
+
+    nmos = s130.modules.nmos
+    pmos = s130.modules.pmos
+
+    m = h.Module()
+    m.VDD, m.VSS = h.Ports(2)
+    m.i = h.Input()
+    m.z = h.Output()
+    m.n = nmos(MosParams(w=1, m=p.weight))(d=m.z, g=m.i, s=m.VSS, b=m.VSS)
+    m.p = pmos(MosParams(w=2, m=p.weight))(d=m.z, g=m.i, s=m.VDD, b=m.VDD)
+
+    return m
+
+
+@h.generator
+def TriInv(p: Width) -> h.Module:
+    import s130
+    from s130 import MosParams
+
+    nmos = s130.modules.nmos
+    pmos = s130.modules.pmos
+
+    m = h.Module()
+    m.VDD, m.VSS = h.Ports(2)
+    m.i, m.en = h.Inputs(2)
+    m.z = h.Output()
+    m.enb = h.Signal()
+
+    # Enable inversion inverter
+    m.pinv = pmos(MosParams(w=1, m=1))(d=m.enb, g=m.en, s=m.VDD, b=m.VDD)
+    m.ninv = nmos(MosParams(w=1, m=1))(d=m.enb, g=m.en, s=m.VSS, b=m.VSS)
+
+    # Main Tristate Inverter
+    m.pi = pmos(MosParams(w=2, m=p.width))(g=m.i, s=m.VDD, b=m.VDD)
+    m.pe = pmos(MosParams(w=2, m=p.width))(d=m.z, g=m.enb, s=m.pi.d, b=m.VDD)
+    m.ne = nmos(MosParams(w=1, m=p.width))(d=m.z, g=m.en, b=m.VSS)
+    m.ni = nmos(MosParams(w=1, m=p.width))(d=m.ne.s, g=m.i, s=m.VSS, b=m.VSS)
+
+    return m
 
 
 @h.paramclass
@@ -140,6 +186,7 @@ def PhaseWeighter(p: PhaseWeighterParams) -> h.Module:
     @h.module
     class PhaseWeighter:
         # IO Ports
+        VDD, VSS = h.Ports(2)
         a, b = h.Inputs(2)
         out = h.Output()
         mix = h.Signal(desc="Internal phase-mixing node")
@@ -148,12 +195,18 @@ def PhaseWeighter(p: PhaseWeighterParams) -> h.Module:
     P = PhaseWeighter
 
     if p.wta > 0:  # a-input inverter
-        P.inva = WeightInv(WeightInvParams(weight=p.wta))(i=P.a, z=P.mix)
+        P.inva = WeightInv(WeightInvParams(weight=p.wta))(
+            i=P.a, z=P.mix, VDD=P.VDD, VSS=P.VSS
+        )
     if p.wtb > 0:  # b-input inverter
-        P.invb = WeightInv(WeightInvParams(weight=p.wtb))(i=P.b, z=P.mix)
+        P.invb = WeightInv(WeightInvParams(weight=p.wtb))(
+            i=P.b, z=P.mix, VDD=P.VDD, VSS=P.VSS
+        )
 
     # Output inverter, with the combined size of the two inputs
-    P.invo = WeightInv(WeightInvParams(weight=p.wta + p.wtb))(i=P.mix, z=P.out)
+    P.invo = WeightInv(WeightInvParams(weight=1))(
+        i=P.mix, z=P.out, VDD=P.VDD, VSS=P.VSS
+    )
 
     return PhaseWeighter
 
@@ -173,6 +226,7 @@ def PhaseGenerator(p: PiParams) -> h.Module:
     an array of equally-spaced output phases. """
 
     PhaseGen = h.Module()
+    VDD, VSS = PhaseGen.VDD, PhaseGen.VSS = h.Ports(2)
     ckq = PhaseGen.ckq = QuadClock(
         role=QuadClock.Roles.SINK, port=True, desc="Quadrature input"
     )
@@ -186,32 +240,40 @@ def PhaseGenerator(p: PiParams) -> h.Module:
 
     # Generate a set of PhaseWeighters and output phases for each pair of quadrature inputs
     for wtb in range(8):
-        p = PhaseWeighterParams(wta=7 - wtb, wtb=wtb)
+        p = PhaseWeighterParams(wta=8 - wtb, wtb=wtb)
         index = wtb
         PhaseGen.add(
             name=f"weight{index}",
-            val=PhaseWeighter(p)(a=ckq.ck0, b=ckq.ck90, out=phases[index]),
+            val=PhaseWeighter(p)(
+                a=ckq.ck0, b=ckq.ck90, out=phases[index], VDD=VDD, VSS=VSS
+            ),
         )
     for wtb in range(8):
-        p = PhaseWeighterParams(wta=7 - wtb, wtb=wtb)
+        p = PhaseWeighterParams(wta=8 - wtb, wtb=wtb)
         index = 8 + wtb
         PhaseGen.add(
             name=f"weight{index}",
-            val=PhaseWeighter(p)(a=ckq.ck90, b=ckq.ck180, out=phases[index]),
+            val=PhaseWeighter(p)(
+                a=ckq.ck90, b=ckq.ck180, out=phases[index], VDD=VDD, VSS=VSS
+            ),
         )
     for wtb in range(8):
-        p = PhaseWeighterParams(wta=7 - wtb, wtb=wtb)
+        p = PhaseWeighterParams(wta=8 - wtb, wtb=wtb)
         index = 16 + wtb
         PhaseGen.add(
             name=f"weight{index}",
-            val=PhaseWeighter(p)(a=ckq.ck180, b=ckq.ck270, out=phases[index]),
+            val=PhaseWeighter(p)(
+                a=ckq.ck180, b=ckq.ck270, out=phases[index], VDD=VDD, VSS=VSS
+            ),
         )
     for wtb in range(8):
-        p = PhaseWeighterParams(wta=7 - wtb, wtb=wtb)
+        p = PhaseWeighterParams(wta=8 - wtb, wtb=wtb)
         index = 24 + wtb
         PhaseGen.add(
             name=f"weight{index}",
-            val=PhaseWeighter(p)(a=ckq.ck270, b=ckq.ck0, out=phases[index]),
+            val=PhaseWeighter(p)(
+                a=ckq.ck270, b=ckq.ck0, out=phases[index], VDD=VDD, VSS=VSS
+            ),
         )
 
     return PhaseGen
@@ -231,7 +293,7 @@ def PhaseSelector(p: PiParams) -> h.Module:
 
         # Internal Contents
         encoder = OneHotEncoder(width=5)(bin=sel, en=VDD, VDD=VDD, VSS=VSS)
-        invs = 32 * TriInv()(i=phases, en=encoder.out, z=out, VDD=VDD, VSS=VSS)
+        invs = 32 * TriInv(width=4)(i=phases, en=encoder.out, z=out, VDD=VDD, VSS=VSS)
 
     return PhaseSelector
 
@@ -252,28 +314,10 @@ def PhaseInterp(p: PiParams) -> h.Module:
         phases = h.Signal(width=2 ** p.nbits, desc="Array of equally-spaced phases")
 
         # Instantiate the phase-generator and phase-selector
-        phgen = PhaseGenerator(p)(ckq=ckq, phases=phases)
+        phgen = PhaseGenerator(p)(ckq=ckq, phases=phases, VDD=VDD, VSS=VSS)
         phsel = PhaseSelector(p)(phases=phases, sel=sel, out=out, VDD=VDD, VSS=VSS)
 
     return PhaseInterp
-
-
-@h.bundle
-class Diff:
-    """ Differential Bundle """
-
-    class Roles(Enum):
-        SOURCE = auto()
-        SINK = auto()
-
-    p, n = h.Signals(2, src=Roles.SOURCE, dest=Roles.SINK)
-
-
-@h.paramclass
-class Width:
-    """ Parameter class for Generators with a single integer-valued `width` parameter. """
-
-    width = h.Param(dtype=int, desc="Parametric Width", default=1)
 
 
 @h.module
@@ -372,9 +416,31 @@ def OneHotEncoder(p: Width) -> h.Module:
     return m
 
 
+@h.module
+class ThermoEncoder3to8:
+    """ 
+    # Thermometer Encoder
+    3b to 8b with enable. Internally uses `OneHot3to8`. 
+    """
+
+    # IO Interface
+    VDD, VSS = h.Ports(2)
+    en = h.Input(width=1, desc="Enable input. Active high.")
+    bin = h.Input(width=3, desc="Binary valued input")
+    out = h.Output(width=8, desc="Thermometer encoded output")
+
+    # Internal Contents
+    onehot = h.Signal(width=8, desc="Internal one-hot encoded value")
+    bin2onehot = OneHotEncoder3to8(en=en, bin=bin, out=onehot, VDD=VDD, VSS=VSS)
+
+    # Conversion from one-hot to thermometer
+    ors = 8 * Or2(a=onehot, b=h.Concat(out[1:], VSS), z=out, VDD=VDD, VSS=VSS)
+
+
 @h.generator
 def OneHotMux(p: Width) -> h.Module:
-    """ # One-Hot Selected Mux """
+    """ # One-Hot Selected Mux 
+    Selection input is one-hot encoded. Any conversion is to be done externally. """
 
     m = h.Module()
 
@@ -408,8 +474,8 @@ def Counter(p: Width) -> h.Module:
 @h.generator
 def OneHotRotator(p: Width) -> h.Module:
     """ # One Hot Rotator 
-    A set of `p.width` flops with a one-hot state, 
-    which rotates by one bit on each clock cycle. """
+    A set of `p.width` flops with a one-hot state, which rotates by one bit on each clock cycle. 
+    When active-low reset-input `rstn` is asserted, the LSB is enabled. """
 
     m = h.Module()
     m.VDD, m.VSS = h.Ports(2)
@@ -459,10 +525,7 @@ def TxSerializer(_: h.HasNoParams) -> h.Module:
     count = h.Concat(m.count_lsbs, m.pclk)
 
     m.counter = Counter(width=4)(clk=m.sclk, out=count, VDD=m.VDD, VSS=m.VSS)
-    m.enable_encoder = h.Signal(desc="FIXME: tie this high!")
-    m.encoder = OneHotEncoder(width=4)(
-        bin=count, en=m.enable_encoder, VDD=m.VDD, VSS=m.VSS
-    )
+    m.encoder = OneHotEncoder(width=4)(bin=count, en=m.VDD, VDD=m.VDD, VSS=m.VSS)
     m.mux = OneHotMux(width=16)(
         inp=m.pdata, out=m.sdata, sel=m.encoder.out, VDD=m.VDD, VSS=m.VSS
     )
