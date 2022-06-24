@@ -1,13 +1,13 @@
-# Std-Lib Imports
-from typing import Dict
-from enum import Enum, auto
+"""
+# One-Hot Rotator
+"""
 
 # Hdl & PDK Imports
 import hdl21 as h
 
 # Local Imports
-from .width import Width
-from .logiccells import Inv, And2, FlopResetLow, FlopResetHigh
+from ..width import Width
+from ..logiccells import Inv, And2, FlopResetLow, FlopResetHigh
 
 
 @h.generator
