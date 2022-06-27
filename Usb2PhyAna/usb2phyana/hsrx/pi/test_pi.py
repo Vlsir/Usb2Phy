@@ -7,6 +7,10 @@
 import copy
 from pathlib import Path
 
+# PyPi Imports
+import numpy as np
+import matplotlib.pyplot as plt
+
 # Hdl & PDK Imports
 import sitepdks as _
 import s130
@@ -134,7 +138,7 @@ def sim_phase_interp(code: int = 11) -> float:
 
     # Craft our simulation stimulus
     sim = Sim(tb=tb, attrs=s130.install.include(Corner.TYP))
-    _tr = sim.tran(tstop=6 * n, name="FOR_GODS_SAKE_MAKE_NO_NAME_WORK")
+    sim.tran(tstop=10 * n)
 
     # FIXME: eventually this can be a simulator-internal `Sweep`
     # p = sim.param(name="code", val=0)
@@ -146,14 +150,15 @@ def sim_phase_interp(code: int = 11) -> float:
     sim.literal(
         f"""
         simulator lang=spice
-        .measure tran tdelay when V(xtop:dck)=900m rise=2
+        .measure tran tdelay when V(xtop:dck)=900m rise=2 td=3n
+        .option autostop=yes
         simulator lang=spectre
     """
     )
     # .measure tran tdelay trig V(xtop:ckq_ck0) val=900m rise=2 targ V(xtop:dck) val=900m rise=1
 
     sim.include("../scs130lp.sp")  # FIXME! relies on this netlist of logic cells
-    # sim_options.rundir = Path(f"./scratch/code{code}")
+    sim_options.rundir = Path(f"./scratch/code{code}")
     results = sim.run(sim_options)
 
     print(results.an[0].measurements)
@@ -165,3 +170,15 @@ def test_phase_interp():
     """ Phase Interpolator Test(s) """
     delays = [sim_phase_interp(code) for code in range(32)]
     print(delays)
+
+    # Unwrap the period from the delays
+    delays = np.array(delays) % float(2 * n)
+    amin = np.argmin(delays)
+    delays = np.concatenate((delays[amin:], delays[:amin]))
+    print(delays)
+
+    # And save a plot of the results
+    plt.ioff()
+    plt.plot(delays)
+    plt.savefig("delays.png")
+

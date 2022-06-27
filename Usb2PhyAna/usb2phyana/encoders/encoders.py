@@ -7,8 +7,8 @@ Conversion Modules between binary, one-hot, thermometer, and the like.
 import hdl21 as h
 
 # Local Imports
-from .width import Width 
-from .logiccells import Inv, And2, And3, Or2
+from ..width import Width 
+from ..logiccells import Inv, And2, And3, Or2
 
 
 @h.module
