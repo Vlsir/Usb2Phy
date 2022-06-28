@@ -9,7 +9,7 @@ from s130 import MosParams
 
 # Local Imports
 from ..diff import Diff
-
+from ..cml import CmlParams 
 
 NmosLvt = s130.modules.nmos_lvt
 Cap = h.primitives.Cap
@@ -19,14 +19,6 @@ Res = h.primitives.Res
 Nswitch = NmosLvt(MosParams(m=10))
 Nbias = NmosLvt(MosParams(w=1, l=1, m=100))
 
-
-@h.paramclass
-class CmlParams:
-    """ CML Parameters """
-
-    rl = h.Param(dtype=h.Prefixed, desc="Load Res Value (Ohms)")
-    cl = h.Param(dtype=h.Prefixed, desc="Load Cap Value (F)")
-    ib = h.Param(dtype=h.Prefixed, desc="Bias Current Value (A)")
 
 
 @h.generator

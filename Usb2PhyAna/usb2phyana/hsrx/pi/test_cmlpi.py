@@ -1,5 +1,5 @@
 """ 
-# Phase Interpolator 
+# CML Phase Interpolator 
 ## Unit Tests 
 """
 
@@ -17,14 +17,16 @@ import s130
 import hdl21 as h
 from hdl21.pdk import Corner
 from hdl21.sim import Sim, LinearSweep, SaveMode
-from hdl21.prefix import m, n, PICO
-from hdl21.primitives import Vpulse, Vdc
+from hdl21.prefix import m, n, PICO, µ, f, K
+from hdl21.primitives import Vdc, Idc
 
 # DUT Imports
 from ...tests.sim_options import sim_options
-from . import PhaseInterp
-from .. import QuadClock
 from ...tests.quadclockgen import QuadClockGen, QclkParams
+from .cmlpi import PhaseInterp
+from .. import Diff
+from ...cmldiv import CmlBuf, CmlParams
+# from .. import QuadClock # FIXME: Sad!
 
 
 @h.paramclass
@@ -37,16 +39,47 @@ class TbParams:
 def PhaseInterpTb(p: TbParams) -> h.Module:
     """ Phase Interpolator Testbench """
 
+    params = CmlParams(rl=4 * K, cl=25 * f, ib=250 * µ)
+
     tb = h.sim.tb("PhaseInterpTb")
 
     # Generate the input quadrature clock
-    tb.ckq = ckq = QuadClock()
+    # tb.ckq = ckq = QuadClock()
+    # Sadly we've gotta cobble this together from scalar Signals, for now
+    tb.ck0, tb.ck90, tb.ck180, tb.ck270 = h.Signals(4)
+
+    ckq = h.AnonymousBundle(ck0=tb.ck0, ck90=tb.ck90, ck180=tb.ck180, ck270=tb.ck270,)
     ckp = QclkParams(v1=0 * m, v2=p.VDD, period=2 * n, trf=100 * PICO)
     tb.ckgen = QuadClockGen(ckp)(ckq=ckq, VSS=tb.VSS)
 
     # Generate and drive VDD
     tb.VDD = h.Signal()
     tb.vvdd = Vdc(Vdc.Params(dc=p.VDD))(p=tb.VDD, n=tb.VSS)
+
+    # And create "Diff-like" I and Q bundles
+    cki = h.AnonymousBundle(p=tb.ck0, n=tb.ck180,)
+    ckq = h.AnonymousBundle(p=tb.ck90, n=tb.ck270,)
+
+    # Buffer both input clocks, pulling them into our CML levels
+    tb.ck0buf, tb.ck90buf, tb.ck180buf, tb.ck270buf = h.Signals(4)
+    tb.bufbiasi = bufbiasi = h.Signal()
+    tb.iibuf = Idc(Idc.Params(dc=-1 * params.ib))(p=bufbiasi, n=tb.VSS)
+    tb.ckbufi = CmlBuf(params)(
+        i=cki,
+        o=h.AnonymousBundle(p=tb.ck0buf, n=tb.ck180buf),
+        ibias=bufbiasi,
+        VDD=tb.VDD,
+        VSS=tb.VSS,
+    )
+    tb.bufbiasq = bufbiasq = h.Signal()
+    tb.iqbuf = Idc(Idc.Params(dc=-1 * params.ib))(p=bufbiasq, n=tb.VSS)
+    tb.ckbufq = CmlBuf(params)(
+        i=ckq,
+        o=h.AnonymousBundle(p=tb.ck90buf, n=tb.ck270buf),
+        ibias=bufbiasq,
+        VDD=tb.VDD,
+        VSS=tb.VSS,
+    )
 
     # Set up the select/ code input
     tb.code = h.Signal(width=5)
@@ -75,9 +108,12 @@ def PhaseInterpTb(p: TbParams) -> h.Module:
     # Call all that to drive the code bus
     vcode(p.code)
 
-    tb.dck = h.Signal(width=1)
+    tb.dck = Diff()
+    ckqbuf = h.AnonymousBundle(
+        ck0=tb.ck0buf, ck90=tb.ck90buf, ck180=tb.ck180buf, ck270=tb.ck270buf,
+    )
     tb.dut = PhaseInterp(nbits=5)(
-        VDD=tb.VDD, VSS=tb.VSS, ckq=tb.ckq, sel=tb.code, out=tb.dck
+        VDD=tb.VDD, VSS=tb.VSS, ckq=ckqbuf, sel=tb.code, out=tb.dck
     )
     return tb
 
@@ -91,6 +127,11 @@ def sim_phase_interp(code: int = 11) -> float:
 
     # Craft our simulation stimulus
     sim = Sim(tb=tb, attrs=s130.install.include(Corner.TYP))
+    sim.include("../scs130lp.sp")  # FIXME! relies on this netlist of logic cells
+
+    opts = copy(sim_options)
+    opts.rundir = Path(f"./scratch/code{code}")
+
     sim.tran(tstop=10 * n)
 
     # FIXME: eventually this can be a simulator-internal `Sweep`
@@ -103,16 +144,12 @@ def sim_phase_interp(code: int = 11) -> float:
     sim.literal(
         f"""
         simulator lang=spice
-        .measure tran tdelay when V(xtop:dck)=900m rise=2 td=3n
+        .measure tran tdelay when 'V(xtop:dck_p)-V(xtop:dck_n)'=0 rise=2 td=3n
         .option autostop
         simulator lang=spectre
     """
     )
     # .measure tran tdelay trig V(xtop:ckq_ck0) val=900m rise=2 targ V(xtop:dck) val=900m rise=1
-
-    sim.include("../scs130lp.sp")  # FIXME! relies on this netlist of logic cells
-    opts = copy(sim_options)
-    opts.rundir = Path(f"./scratch/code{code}")
 
     results = sim.run(opts)
 
@@ -134,6 +171,8 @@ def test_phase_interp():
 
     # And save a plot of the results
     plt.ioff()
-    plt.plot(delays)
+    plt.plot(delays * 1e12)
+    plt.ylabel("Delay (ps)")
+    plt.xlabel("PI Code")
     plt.savefig("delays.png")
 

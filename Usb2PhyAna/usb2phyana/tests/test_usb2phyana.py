@@ -87,3 +87,4 @@ def test_netlisting():
     import sys
 
     h.netlist(h.to_proto(Usb2PhyAna), dest=sys.stdout)
+

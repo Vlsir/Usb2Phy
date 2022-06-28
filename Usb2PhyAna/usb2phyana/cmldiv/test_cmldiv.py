@@ -3,66 +3,20 @@
 ## Unit Tests
 """
 
-# Std-Lib Imports
-from pathlib import Path
-
+# Hdl & PDK Imports
 import sitepdks as _
 import s130
 import hdl21 as h
 from hdl21.pdk import Corner
 from hdl21.sim import Sim
 from hdl21.prefix import m, p, n, K, f, µ
-from hdl21.primitives import Vpulse, Vdc, Idc
+from hdl21.primitives import Vdc, Idc
 
 # DUT Imports
+from .cmldiv import CmlBuf, CmlDiv, CmlParams
+from ..diff import Diff
+from ..tests.diffclockgen import DiffClkGen, DiffClkParams
 from ..tests.sim_options import sim_options
-from .cmldiv import CmlBuf, CmlDiv, CmlParams, Diff
-
-
-
-@h.paramclass
-class DiffClkParams:
-    """ Differential Clock Generator Parameters """
-
-    period = h.Param(dtype=h.Prefixed, desc="Period")
-    delay = h.Param(dtype=h.Prefixed, desc="Delay")
-    vd = h.Param(dtype=h.Prefixed, desc="Differential Voltage")
-    vc = h.Param(dtype=h.Prefixed, desc="Common-Mode Voltage")
-    trf = h.Param(dtype=h.Prefixed, desc="Rise / Fall Time")
-
-
-@h.generator
-def DiffClkGen(p: DiffClkParams) -> h.Module:
-    """ # Differential Clock Generator 
-    For simulation, from ideal pulse voltage sources """
-
-    ckg = h.Module()
-    ckg.VSS = VSS = h.Port()
-    ckg.ck = ck = Diff(role=Diff.Roles.SINK, port=True)
-
-    def vparams(polarity: bool) -> Vpulse.Params:
-        """ Closure to create the pulse-source parameters for each differential half. 
-        Argument `polarity` is True for positive half, False for negative half. """
-        # Initially create the voltage levels for the positive half
-        v1 = p.vc + p.vd / 2
-        v2 = p.vc - p.vd / 2
-        if not polarity:  # And for the negative half, swap them
-            v1, v2 = v2, v1
-        return Vpulse.Params(
-            v1=v1,
-            v2=v2,
-            period=p.period,
-            rise=p.trf,
-            fall=p.trf,
-            width=p.period / 2 - p.trf,
-            delay=p.delay,
-        )
-
-    # Create the two complementary pulse-sources
-    ckg.vp = Vpulse(vparams(True))(p=ck.p, n=VSS)
-    ckg.vn = Vpulse(vparams(False))(p=ck.n, n=VSS)
-
-    return ckg
 
 
 @h.generator
