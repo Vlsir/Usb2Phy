@@ -42,10 +42,12 @@ def wrap(wrapper_name: str, wrapped_name: str, ports: Dict[str, str]) -> h.Modul
 
 # Wrapped Foundry / PDK Cells
 Inv = wrap("Inv", "scs130lp_inv_2", ports={"i": "A", "z": "Y"})
+Buf = wrap("Buf", "scs130lp_buf_0", ports={"i": "A", "z": "X"})
 Or2 = wrap("Or2", "scs130lp_or2_1", ports={"a": "A", "b": "B", "z": "X"})
 Or3 = wrap("Or3", "scs130lp_or3_1", ports={"a": "A", "b": "B", "c": "C", "z": "X"})
 And2 = wrap("And2", "scs130lp_and2_1", ports={"a": "A", "b": "B", "z": "X"})
 And3 = wrap("And3", "scs130lp_and3_1", ports={"a": "A", "b": "B", "c": "C", "z": "X"})
+Xor2 = wrap("Xor2", "scs130lp_xor2_0", ports={"a": "A", "b": "B", "z": "X"})
 FlopResetLow = wrap(
     "FlopResetLow",
     "scs130lp_dfrtp_4",
