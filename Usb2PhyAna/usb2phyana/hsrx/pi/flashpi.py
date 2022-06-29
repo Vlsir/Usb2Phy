@@ -10,6 +10,7 @@ nmos = s130.modules.nmos
 pmos = s130.modules.pmos
 
 # Local Imports
+from ...diff import Diff
 from ...quadclock import QuadClock
 from ...encoders import OneHotEncoder
 from ...triinv import TriInv
@@ -168,15 +169,17 @@ def PhaseInterp(p: PiParams) -> h.Module:
     class PhaseInterp:
         # IO Interface
         VDD, VSS = h.Ports(2)
-        ckq = QuadClock(role=QuadClock.Roles.SINK, port=True, desc="Quadrature input")
+
+        ckq = QuadClock(role=QuadClock.Roles.SINK, port=True, desc="Quadrature clock input")
+        out = Diff(port=True, role=Diff.Roles.SOURCE, desc="Output clock")
         sel = h.Input(width=p.nbits, desc="Selection input")
-        out = h.Output(width=1, desc="Clock output")
 
         # Internal Signals
         phases = h.Signal(width=2 ** p.nbits, desc="Array of equally-spaced phases")
 
         # Instantiate the phase-generator and phase-selector
         phgen = PhaseGenerator(p)(ckq=ckq, phases=phases, VDD=VDD, VSS=VSS)
-        phsel = PhaseSelector(p)(phases=phases, sel=sel, out=out, VDD=VDD, VSS=VSS)
+        ### FIXME: driving differential/ complementary output 
+        phsel = PhaseSelector(p)(phases=phases, sel=sel, out=out.p, VDD=VDD, VSS=VSS)
 
     return PhaseInterp

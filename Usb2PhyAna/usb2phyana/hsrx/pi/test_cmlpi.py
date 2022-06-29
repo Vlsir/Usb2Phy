@@ -7,10 +7,6 @@
 from copy import copy
 from pathlib import Path
 
-# PyPi Imports
-import numpy as np
-import matplotlib.pyplot as plt
-
 # Hdl & PDK Imports
 import sitepdks as _
 import s130
@@ -25,8 +21,9 @@ from ...tests.sim_options import sim_options
 from ...tests.quadclockgen import QuadClockGen, QclkParams
 from .cmlpi import PhaseInterp
 from .. import Diff
-from ...cmldiv import CmlBuf, CmlParams
-# from .. import QuadClock # FIXME: Sad!
+from ...cmlbuf import CmlBuf
+from ...cmlparams import CmlParams
+from .. import QuadClock 
 
 
 @h.paramclass
@@ -41,41 +38,36 @@ def PhaseInterpTb(p: TbParams) -> h.Module:
 
     params = CmlParams(rl=4 * K, cl=25 * f, ib=250 * µ)
 
+    # Create our testbench 
     tb = h.sim.tb("PhaseInterpTb")
-
-    # Generate the input quadrature clock
-    # tb.ckq = ckq = QuadClock()
-    # Sadly we've gotta cobble this together from scalar Signals, for now
-    tb.ck0, tb.ck90, tb.ck180, tb.ck270 = h.Signals(4)
-
-    ckq = h.AnonymousBundle(ck0=tb.ck0, ck90=tb.ck90, ck180=tb.ck180, ck270=tb.ck270,)
-    ckp = QclkParams(v1=0 * m, v2=p.VDD, period=2 * n, trf=100 * PICO)
-    tb.ckgen = QuadClockGen(ckp)(ckq=ckq, VSS=tb.VSS)
-
     # Generate and drive VDD
     tb.VDD = h.Signal()
     tb.vvdd = Vdc(Vdc.Params(dc=p.VDD))(p=tb.VDD, n=tb.VSS)
 
-    # And create "Diff-like" I and Q bundles
-    cki = h.AnonymousBundle(p=tb.ck0, n=tb.ck180,)
-    ckq = h.AnonymousBundle(p=tb.ck90, n=tb.ck270,)
+    # Generate the input quadrature clock
+    tb.ckq = ckq = QuadClock()
+    qckparams = QclkParams(v1=0 * m, v2=p.VDD, period=2 * n, trf=100 * PICO)
+    tb.ckgen = QuadClockGen(qckparams)(ckq=ckq, VSS=tb.VSS)
 
     # Buffer both input clocks, pulling them into our CML levels
-    tb.ck0buf, tb.ck90buf, tb.ck180buf, tb.ck270buf = h.Signals(4)
+    tb.ckibuf = Diff()
+    tb.ckqbuf = Diff()
+
     tb.bufbiasi = bufbiasi = h.Signal()
     tb.iibuf = Idc(Idc.Params(dc=-1 * params.ib))(p=bufbiasi, n=tb.VSS)
     tb.ckbufi = CmlBuf(params)(
-        i=cki,
-        o=h.AnonymousBundle(p=tb.ck0buf, n=tb.ck180buf),
+        i=h.AnonymousBundle(p=tb.ckq.ck0, n=tb.ckq.ck180),
+        o=tb.ckibuf,
         ibias=bufbiasi,
         VDD=tb.VDD,
         VSS=tb.VSS,
     )
+
     tb.bufbiasq = bufbiasq = h.Signal()
     tb.iqbuf = Idc(Idc.Params(dc=-1 * params.ib))(p=bufbiasq, n=tb.VSS)
     tb.ckbufq = CmlBuf(params)(
-        i=ckq,
-        o=h.AnonymousBundle(p=tb.ck90buf, n=tb.ck270buf),
+        i=h.AnonymousBundle(p=tb.ckq.ck90, n=tb.ckq.ck270),
+        o=tb.ckqbuf,
         ibias=bufbiasq,
         VDD=tb.VDD,
         VSS=tb.VSS,
@@ -110,7 +102,7 @@ def PhaseInterpTb(p: TbParams) -> h.Module:
 
     tb.dck = Diff()
     ckqbuf = h.AnonymousBundle(
-        ck0=tb.ck0buf, ck90=tb.ck90buf, ck180=tb.ck180buf, ck270=tb.ck270buf,
+        ck0=tb.ckibuf.p, ck90=tb.ckqbuf.p, ck180=tb.ckibuf.n, ck270=tb.ckqbuf.n,
     )
     tb.dut = PhaseInterp(nbits=5)(
         VDD=tb.VDD, VSS=tb.VSS, ckq=ckqbuf, sel=tb.code, out=tb.dck
@@ -149,7 +141,6 @@ def sim_phase_interp(code: int = 11) -> float:
         simulator lang=spectre
     """
     )
-    # .measure tran tdelay trig V(xtop:ckq_ck0) val=900m rise=2 targ V(xtop:dck) val=900m rise=1
 
     results = sim.run(opts)
 
@@ -160,19 +151,9 @@ def sim_phase_interp(code: int = 11) -> float:
 
 def test_phase_interp():
     """ Phase Interpolator Test(s) """
+    from .compare import save_plot
+
     delays = [sim_phase_interp(code) for code in range(32)]
     print(delays)
 
-    # Unwrap the period from the delays
-    delays = np.array(delays) % float(2 * n)
-    amin = np.argmin(delays)
-    delays = np.concatenate((delays[amin:], delays[:amin]))
-    print(delays)
-
-    # And save a plot of the results
-    plt.ioff()
-    plt.plot(delays * 1e12)
-    plt.ylabel("Delay (ps)")
-    plt.xlabel("PI Code")
-    plt.savefig("delays.png")
-
+    save_plot(delays, "CML PI", "cmlpi.png")

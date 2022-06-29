@@ -1,5 +1,8 @@
+""" 
+# Differential Bundle
+"""
+
 # Std-Lib Imports
-from typing import Dict
 from enum import Enum, auto
 
 # Hdl & PDK Imports
@@ -15,3 +18,7 @@ class Diff:
         SINK = auto()
 
     p, n = h.Signals(2, src=Roles.SOURCE, dest=Roles.SINK)
+
+def inverse(d: Diff) -> h.AnonymousBundle:
+    """ Create a Bundle with the same signals as `d`, but with `p` and `n` reversed. """
+    return h.AnonymousBundle(p=d.n, n=d.p)

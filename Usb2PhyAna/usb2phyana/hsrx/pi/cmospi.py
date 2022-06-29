@@ -8,6 +8,7 @@ from hdl21.prefix import f
 Cap = h.primitives.Cap
 
 # Local Imports
+from ...diff import Diff 
 from ...quadclock import QuadClock
 from ...encoders import OneHotEncoder, ThermoEncoder3to8
 from ...triinv import TriInv
@@ -127,15 +128,17 @@ def PhaseInterp(p: PiParams) -> h.Module:
     class PhaseInterp:
         # IO Interface
         VDD, VSS = h.Ports(2)
-        ckq = QuadClock(role=QuadClock.Roles.SINK, port=True, desc="Quadrature input")
+
+        ckq = QuadClock(role=QuadClock.Roles.SINK, port=True, desc="Quadrature clock input")
+        out = Diff(port=True, role=Diff.Roles.SOURCE, desc="Output clock")
         sel = h.Input(width=p.nbits, desc="Selection input")
-        out = h.Output(width=1, desc="Clock output")
 
         # Internal Implementation
         eck, lck = h.Signals(2, width=1, desc="Early & Late MSB Clocks")
         ## MSB Selection Mux
         msb_mux = MsbMux(p)(ckq=ckq, sel=sel[-2:], eck=eck, lck=lck, VDD=VDD, VSS=VSS)
         ## LSB / Fine Interpolator
-        fine = FineInterp(p)(eck=eck, lck=lck, sel=sel[:-2], out=out, VDD=VDD, VSS=VSS)
+        ### FIXME: driving differential/ complementary output 
+        fine = FineInterp(p)(eck=eck, lck=lck, sel=sel[:-2], out=out.p, VDD=VDD, VSS=VSS)
 
     return PhaseInterp

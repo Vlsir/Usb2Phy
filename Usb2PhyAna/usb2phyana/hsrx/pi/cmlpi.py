@@ -2,10 +2,13 @@
 # CML Phase Interpolator 
 """
 
+# Std-Lib Imports 
+from enum import Enum, auto
+
 # Hdl & PDK Imports
 import hdl21 as h
-from hdl21.prefix import m, p, n, K, f, µ
-from hdl21.primitives import Vpulse, Vdc, Idc
+from hdl21.prefix import K, f, µ
+from hdl21.primitives import Idc
 import s130
 from s130 import MosParams
 
@@ -21,7 +24,7 @@ Nbias = NmosLvt(MosParams(w=1, l=1, m=100))
 from ...quadclock import QuadClock
 from ...diff import Diff
 from ...logiccells import Inv
-from ...cml import CmlParams
+from ...cmlparams import CmlParams
 from .encoder import PiEncoder
 
 
@@ -30,6 +33,19 @@ class PiParams:
     """ Phase Interpolator Parameters """
 
     nbits = h.Param(dtype=int, default=5, desc="Resolution, or width of select-input.")
+
+@h.bundle 
+class IqPair:
+    """ 
+    # I/Q Signal Pair 
+    Pair of signals which represent in-phase and quadrature components of a complex signal.
+    """
+
+    class Roles(Enum):
+        SOURCE = auto()
+        SINK = auto()
+
+    i, q = h.Signals(2, width=1, src=Roles.SOURCE, dest=Roles.SINK)
 
 
 @h.generator
@@ -42,18 +58,19 @@ def IdacTherm(p: CmlParams) -> h.Module:
     class IdacTherm:
         # IO Interface
         VDD, VSS = h.Ports(2)
-        itherm, qtherm = h.Inputs(2, width=8)
-        iout, qout = h.Outputs(2)
+
+        itherm, qtherm = h.Inputs(2, width=8, desc="Thermometer Encoded I/Q Codes")
+        out = IqPair(port=True, role=IqPair.Roles.SOURCE)
         bias = h.Input()
 
         # Internal Implementation
         ## Primary current-switching units
         units = 7 * Unit(
-            ep=itherm[1:], em=qtherm[1:], op=iout, om=qout, bias=bias, VDD=VDD, VSS=VSS
+            eni=itherm[1:], enq=qtherm[1:], out=out, bias=bias, VDD=VDD, VSS=VSS
         )
         ## And add an always-on unit for each side
-        uonp = Unit(ep=VDD, em=VSS, op=iout, om=qout, bias=bias, VDD=VDD, VSS=VSS)
-        uonm = Unit(ep=VSS, em=VDD, op=iout, om=qout, bias=bias, VDD=VDD, VSS=VSS)
+        uoni = Unit(eni=VDD, enq=VSS, out=out, bias=bias, VDD=VDD, VSS=VSS)
+        uonq = Unit(eni=VSS, enq=VDD, out=out, bias=bias, VDD=VDD, VSS=VSS)
 
     return IdacTherm
 
@@ -66,12 +83,17 @@ def IdacUnit(_: CmlParams) -> h.Module:
     class IdacUnit:
         # IO Interface
         VDD, VSS = h.Ports(2)
-        ep, em = h.Inputs(2)
-        op, om = h.Outputs(2)
-        ## Gate Bias for Current Source
+
+        eni, enq = h.Inputs(2, desc="Enable I/Q Inputs")
+        out = IqPair(port=True, role=IqPair.Roles.SOURCE)
+
+        ## Gate Bias and Current Source
         bias = h.Input()
         nb = Nbias(g=bias, s=VSS, b=VSS)
-        sw = 2 * Nswitch(g=h.Concat(ep, em), d=h.Concat(op, om), s=nb.d, b=VSS)
+
+        ## Differential Current-Switch 
+        swi = Nswitch(g=eni, d=out.i, s=nb.d, b=VSS)
+        swq = Nswitch(g=enq, d=out.q, s=nb.d, b=VSS)
 
     return IdacUnit
 
@@ -86,12 +108,12 @@ def PhaseInterp(p: PiParams) -> h.Module:
     class PhaseInterp:
         # IO Interface
         VDD, VSS = h.Ports(2)
-        ckq = QuadClock(role=QuadClock.Roles.SINK, port=True, desc="Quadrature input")
+        
+        ckq = QuadClock(role=QuadClock.Roles.SINK, port=True, desc="Quadrature clock input")
+        out = Diff(port=True, role=Diff.Roles.SOURCE, desc="Output clock")
         sel = h.Input(width=p.nbits, desc="Selection input")
-        out = Diff(port=True, role=Diff.Roles.SOURCE)
 
         # Internal Implementation
-        # qmuxck, imuxck = h.Signals(2, width=1, desc="MSB-Selected I&Q Phases")
         qtherm, itherm = h.Signals(2, width=8)
         isel, iselb, qsel, qselb = h.Signals(4)
         encoder = PiEncoder(width=p.nbits)(
@@ -114,7 +136,10 @@ def PhaseInterp(p: PiParams) -> h.Module:
         nb = Nbias(g=ibias, d=ibias, s=VSS, b=VSS)
         daci, dacq = h.Signals(2)
         idac = IdacTherm(params)(
-            qtherm=qtherm, itherm=itherm, iout=daci, qout=dacq, bias=ibias, VDD=VDD, VSS=VSS
+            qtherm=qtherm, 
+            itherm=itherm, 
+            out=h.AnonymousBundle(i=daci, q=dacq),
+            bias=ibias, VDD=VDD, VSS=VSS
         )
 
         ## The "MSB Mux": a set of four polarity-inverting switches

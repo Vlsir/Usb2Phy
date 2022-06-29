@@ -13,7 +13,8 @@ from hdl21.prefix import m, p, n, K, f, µ
 from hdl21.primitives import Vdc, Idc
 
 # DUT Imports
-from .cmldiv import CmlBuf, CmlDiv, CmlParams
+from .cmldiv import CmlDiv, CmlParams
+from ..cmlbuf import CmlBuf
 from ..diff import Diff
 from ..tests.diffclockgen import DiffClkGen, DiffClkParams
 from ..tests.sim_options import sim_options
@@ -46,12 +47,9 @@ def CmlDivTb(params: CmlParams) -> h.Module:
 
     # Create the parameterized DUT
     tb.dut = CmlDiv(params)(
-        ckp=ckd.p,
-        ckn=ckd.n,
-        ip=i.p,
-        in_=i.n,
-        qp=q.p,
-        qn=q.n,
+        clk=ckd,
+        q=q,
+        i=i, 
         ibias=ibias,
         VDD=tb.VDD,
         VSS=tb.VSS,
@@ -64,6 +62,6 @@ def test_cml_div():
 
     params = CmlParams(rl=4 * K, cl=25 * f, ib=250 * µ)
     sim = Sim(tb=CmlDivTb(params), attrs=s130.install.include(Corner.TYP))
-    sim.tran(tstop=12 * n, name="FOR_GODS_SAKE_MAKE_NO_NAME_WORK")
+    sim.tran(tstop=12 * n)
     results = sim.run(sim_options)
     print(results)

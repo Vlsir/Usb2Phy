@@ -21,10 +21,11 @@ from hdl21.prefix import m, n, PICO
 from hdl21.primitives import Vpulse, Vdc
 
 # DUT Imports
-from ...tests.sim_options import sim_options
 from . import PhaseInterp
 from .. import QuadClock
+from ...diff import Diff
 from ...tests.quadclockgen import QuadClockGen, QclkParams
+from ...tests.sim_options import sim_options
 
 
 @h.paramclass
@@ -75,7 +76,7 @@ def PhaseInterpTb(p: TbParams) -> h.Module:
     # Call all that to drive the code bus
     vcode(p.code)
 
-    tb.dck = h.Signal(width=1)
+    tb.dck = Diff()
     tb.dut = PhaseInterp(nbits=5)(
         VDD=tb.VDD, VSS=tb.VSS, ckq=tb.ckq, sel=tb.code, out=tb.dck
     )
@@ -103,12 +104,11 @@ def sim_phase_interp(code: int = 11) -> float:
     sim.literal(
         f"""
         simulator lang=spice
-        .measure tran tdelay when V(xtop:dck)=900m rise=2 td=3n
+        .measure tran tdelay when V(xtop:dck_p)=900m rise=2 td=3n
         .option autostop
         simulator lang=spectre
     """
     )
-    # .measure tran tdelay trig V(xtop:ckq_ck0) val=900m rise=2 targ V(xtop:dck) val=900m rise=1
 
     sim.include("../scs130lp.sp")  # FIXME! relies on this netlist of logic cells
     opts = copy(sim_options)
@@ -123,17 +123,8 @@ def sim_phase_interp(code: int = 11) -> float:
 
 def test_phase_interp():
     """ Phase Interpolator Test(s) """
+    from .compare import save_plot
+
     delays = [sim_phase_interp(code) for code in range(32)]
     print(delays)
-
-    # Unwrap the period from the delays
-    delays = np.array(delays) % float(2 * n)
-    amin = np.argmin(delays)
-    delays = np.concatenate((delays[amin:], delays[:amin]))
-    print(delays)
-
-    # And save a plot of the results
-    plt.ioff()
-    plt.plot(delays)
-    plt.savefig("delays.png")
-
+    save_plot(delays, "CMOS PI", "cmospi.png")

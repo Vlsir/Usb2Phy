@@ -20,7 +20,7 @@ _VLSIR_VERSION = "2.0.dev0"
 setup(
     name="usb2phyana",
     version=_VLSIR_VERSION,
-    description="Hardware Description Library",
+    description="Usb 2 Phy Custom / Analog",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/Vlsir/Usb2Phy",
@@ -34,7 +34,8 @@ setup(
         f"hdl21=={_VLSIR_VERSION}",
         "pydantic==1.8.2",  # Note we are especially sensitive to this version of `pydantic`, see https://github.com/dan-fritchman/Hdl21/issues/15
     ],
+    tests_require=["pytest==5.2", "numpy", "matplotlib"], # FIXME: what `pip` incantation actually gets these installed? 
     extras_require={
-        "dev": ["pytest==5.2", "coverage", "pytest-cov", "black==19.10b0", "twine"]
+        "dev": ["pytest==5.2", "coverage", "pytest-cov", "black==19.10b0", "twine", "numpy", "matplotlib"]
     },
 )
