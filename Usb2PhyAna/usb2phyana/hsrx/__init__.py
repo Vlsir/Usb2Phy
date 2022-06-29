@@ -57,13 +57,11 @@ class Cdr:
     # IO Interface
     VDD, VSS = h.Ports(2)
     qck = QuadClock(port=True, role=QuadClock.Roles.SINK, desc="Input quadrature clock")
-    dck = h.Output(desc="Recovered Data Clock")
-    xck = h.Output(desc="Recovered Edge Clock")  # FIXME!
-    # FIXME: make the recovered clock differential
+    rck = Diff(port=True, role=Diff.Roles.SOURCE, desc="Recovered Differential Clock")
     pi_code = h.Input(width=5, desc="Phase Interpolator Code")
 
     # Implementation
-    pi = PhaseInterp(nbits=5)(ckq=qck, sel=pi_code, out=dck, VDD=VDD, VSS=VSS)
+    pi = PhaseInterp(nbits=5)(ckq=qck, sel=pi_code, out=rck, VDD=VDD, VSS=VSS)
 
 
 @h.module
@@ -81,11 +79,11 @@ class HsRx:
     ## CDR
     qck = QuadClock(port=True, role=QuadClock.Roles.SINK)
     pi_code = h.Input(width=5, desc="Phase Interpolator Code")
-    dck, xck = h.Outputs(2)
+    rck = Diff(port=True, role=Diff.Roles.SOURCE, desc="Recovered Differential Clock")
 
     # Internal Implementation
     ## Clock Recovery
-    cdr = Cdr()(qck=qck, dck=dck, xck=xck, pi_code=pi_code, VDD=VDD, VSS=VSS)
+    cdr = Cdr()(qck=qck, rck=rck, pi_code=pi_code, VDD=VDD, VSS=VSS)
 
     ## Slicers
     # dslicer = Slicer()(inp=pads, out=d, clk=dck)

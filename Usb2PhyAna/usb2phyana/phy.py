@@ -53,6 +53,7 @@ class Usb2PhyAna:
     pads = Diff(desc="Differential Pads", port=True, role=None)
     dig_if = AnaDigBundle(port=True)
     qck = QuadClock(port=True, role=QuadClock.Roles.SINK, desc="Input quadrature clock")
+    rck = Diff(desc="RX Recovered Clock", port=False, role=None)
 
     # Implementation
     ## High-Speed TX
@@ -71,8 +72,7 @@ class Usb2PhyAna:
         pclk=dig_if.rx_pclk,
         pi_code=dig_if.rx_pi_code,
         qck=qck,
-        dck=h.NoConn(),  # FIXME!
-        xck=h.NoConn(),  # FIXME!
+        rck=rck,
         VDD=VDD,
         VSS=VSS,
     )
