@@ -2,29 +2,14 @@
 # Phase Interpolator Comparisons 
 """
 
-from typing import Callable, Sequence
+from typing import Callable
 
-import numpy as np
 import matplotlib.pyplot as plt
 
+import hdl21 as h 
+from hdl21.pdk import Corner
 
-def save_plot(delays: Sequence[float], label:str, fname: str = "delays.png"):
-    """ Save a plot of the delays. 
-    Includes a small bit of "data munging", to remove periodic wraps modulo the reference period. """
-    
-    # Unwrap the period from the delays
-    delays = np.array(delays) % 2e-9 # FIXME: testbench period here
-    amin = np.argmin(delays)
-    delays = np.concatenate((delays[amin:], delays[:amin]))
-    print(delays)
-
-    # And save a plot of the results
-    fig, ax = plt.subplots()
-    ax.set_title(label)
-    ax.plot(delays * 1e12)
-    ax.set_ylabel("Delay (ps)")
-    ax.set_xlabel("PI Code")
-    fig.savefig(fname)
+from .tb import TbParams, save_plot, unwrap
 
 
 def run_one(fn: Callable[[], float], label: str, fname: str):
@@ -34,11 +19,34 @@ def run_one(fn: Callable[[], float], label: str, fname: str):
     save_plot(delays, label, fname)
 
 
+def run_corners(tbgen: h.Generator, label: str, fname: str):
+    """ Run `sim` on `tbgen`, across corners """
+    from .tb import sim 
+
+    fig, ax = plt.subplots()
+
+    for corner in [Corner.TYP, Corner.FAST, Corner.SLOW]:
+        params = [TbParams(corner=corner, code=code) for code in range(32)]
+        delays = [sim(tb=tbgen(p), params=p) for p in params]
+        delays = unwrap(delays)
+        print(delays)
+        ax.plot(delays * 1e12, label=str(corner))
+    
+    # Set up all the other data on our plot
+    ax.set_title(label)
+    ax.set_ylabel("Delay (ps)")
+    ax.set_xlabel("PI Code")
+    ax.legend()
+
+    # And save it to file
+    fig.savefig(fname)
+
+
 def compare():
     """ Compare CMOS and CML Phase Interpolators """
 
-    from .test_pi import sim_phase_interp as cmos_sim
-    from .test_cmlpi import sim_phase_interp as cml_sim
+    from .test_pi import PhaseInterpTb as CmosTb
+    from .test_cmlpi import PhaseInterpTb as CmlTb
 
-    run_one(cmos_sim, "CMOS PI", "cmospi.png")
-    run_one(cml_sim, "CML PI", "cmlpi.png")
+    run_corners(CmosTb, "CMOS PI", "cmospi.png")
+    run_corners(CmlTb, "CML PI", "cmlpi.png")

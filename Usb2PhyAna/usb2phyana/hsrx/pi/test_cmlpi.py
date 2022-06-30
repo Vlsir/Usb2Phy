@@ -1,35 +1,21 @@
 """ 
 # CML Phase Interpolator 
-## Unit Tests 
+## Testbench & Unit Tests
 """
 
-# Std-Lib Imports
-from copy import copy
-from pathlib import Path
-
 # Hdl & PDK Imports
-import sitepdks as _
-import s130
 import hdl21 as h
-from hdl21.pdk import Corner
-from hdl21.sim import Sim, LinearSweep, SaveMode
 from hdl21.prefix import m, n, PICO, µ, f, K
 from hdl21.primitives import Vdc, Idc
 
 # DUT Imports
-from ...tests.sim_options import sim_options
-from ...tests.quadclockgen import QuadClockGen, QclkParams
 from .cmlpi import PhaseInterp
+from .tb import TbParams 
 from .. import Diff
+from .. import QuadClock 
 from ...cmlbuf import CmlBuf
 from ...cmlparams import CmlParams
-from .. import QuadClock 
-
-
-@h.paramclass
-class TbParams:
-    VDD = h.Param(dtype=h.Prefixed, desc="Supply Voltage Value")
-    code = h.Param(dtype=int, desc="PI Code")
+from ...tests.quadclockgen import QuadClockGen, QclkParams
 
 
 @h.generator
@@ -110,50 +96,13 @@ def PhaseInterpTb(p: TbParams) -> h.Module:
     return tb
 
 
-def sim_phase_interp(code: int = 11) -> float:
-    """ Phase Interpolator Delay Sim """
-
-    print(f"Simulating PhaseInterp for code {code}")
-
-    tb = PhaseInterpTb(VDD=1800 * m, code=code)
-
-    # Craft our simulation stimulus
-    sim = Sim(tb=tb, attrs=s130.install.include(Corner.TYP))
-    sim.include("../scs130lp.sp")  # FIXME! relies on this netlist of logic cells
-
-    opts = copy(sim_options)
-    opts.rundir = Path(f"./scratch/code{code}")
-
-    sim.tran(tstop=10 * n)
-
-    # FIXME: eventually this can be a simulator-internal `Sweep`
-    # p = sim.param(name="code", val=0)
-    # sim.sweepanalysis(inner=[tr], var=p, sweep=LinearSweep(0, 1, 2), name="mysweep")
-    # sim.save(SaveMode.ALL)
-    # sim.meas(analysis=tr, name="a_delay", expr="trig_targ_vcode")
-
-    # The delay measurement
-    sim.literal(
-        f"""
-        simulator lang=spice
-        .measure tran tdelay when 'V(xtop:dck_p)-V(xtop:dck_n)'=0 rise=2 td=3n
-        .option autostop
-        simulator lang=spectre
-    """
-    )
-
-    results = sim.run(opts)
-
-    print(results.an[0].measurements)
-    # And return the delay value
-    return results.an[0].measurements["tdelay"]
-
-
 def test_phase_interp():
     """ Phase Interpolator Test(s) """
+
+    from .tb import sim 
     from .compare import save_plot
 
-    delays = [sim_phase_interp(code) for code in range(32)]
+    params = [TbParams(code=code) for code in range(32)]
+    delays = [sim(tb=PhaseInterpTb(p), params=p) for p in params]
     print(delays)
-
     save_plot(delays, "CML PI", "cmlpi.png")
