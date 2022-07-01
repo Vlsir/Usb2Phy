@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 
 import hdl21 as h 
 from hdl21.pdk import Corner
+from hdl21.prefix import m 
 
 from .tb import TbParams, save_plot, unwrap
 
@@ -25,12 +26,25 @@ def run_corners(tbgen: h.Generator, label: str, fname: str):
 
     fig, ax = plt.subplots()
 
-    for corner in [Corner.TYP, Corner.FAST, Corner.SLOW]:
-        params = [TbParams(corner=corner, code=code) for code in range(32)]
+    # PVT Conditions 
+    conditions = [{
+            "corner": corner,
+            "temper": temper,
+            "VDD": VDD,
+        }
+        for corner in [Corner.TYP, Corner.FAST, Corner.SLOW]
+        for temper in [-25, 25, 75]
+        for VDD in [1620*m, 1800*m, 1980*m]
+    ]
+
+    for cond in conditions:
+        pvt = TbParams(**cond)
+        params = [TbParams(code=code, **cond) for code in range(32)]
         delays = [sim(tb=tbgen(p), params=p) for p in params]
         delays = unwrap(delays)
         print(delays)
-        ax.plot(delays * 1e12, label=str(corner))
+        label = f"{pvt.corner} {pvt.VDD} {pvt.temper}"
+        ax.plot(delays * 1e12, label=label)
     
     # Set up all the other data on our plot
     ax.set_title(label)

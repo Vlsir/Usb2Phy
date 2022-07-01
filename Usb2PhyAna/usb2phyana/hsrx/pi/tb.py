@@ -28,6 +28,7 @@ from ...tests.sim_options import sim_options
 class TbParams:
     corner = h.Param(dtype=Corner, desc="Process Corner", default=Corner.TYP)
     VDD = h.Param(dtype=h.Prefixed, desc="Supply Voltage Value", default=1800*m)
+    temper = h.Param(dtype=int, desc="Simulation Temperature (C)", default=25)
     code = h.Param(dtype=int, desc="PI Code", default=11)
 
 
@@ -50,6 +51,7 @@ def sim(tb: h.Instantiable, params: TbParams) -> float:
     sim.literal(
         f"""
         simulator lang=spice
+        .temp {params.temper}
         .measure tran tdelay when 'V(xtop:dck_p)-V(xtop:dck_n)'=0 rise=2 td=3n
         .option autostop
         simulator lang=spectre
