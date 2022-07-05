@@ -2,27 +2,22 @@
 # Phase Interpolator Comparisons 
 """
 
-from typing import Callable
-
+import copy 
 import matplotlib.pyplot as plt
 
 import hdl21 as h 
 from hdl21.pdk import Corner
 from hdl21.prefix import m 
 
-from .tb import TbParams, save_plot, unwrap
-
-
-def run_one(fn: Callable[[], float], label: str, fname: str):
-    """ Run simulation function `fn` for each code """
-    delays = [fn(code) for code in range(32)]
-    print(delays)
-    save_plot(delays, label, fname)
+from .tb import TbParams, save_plot, unwrap, sim_input, tdelay
+from ...tests.sim_options import sim_options
 
 
 def run_corners(tbgen: h.Generator, label: str, fname: str):
     """ Run `sim` on `tbgen`, across corners """
-    from .tb import sim 
+
+    opts = copy.copy(sim_options)
+    opts.rundir = None
 
     fig, ax = plt.subplots()
 
@@ -37,12 +32,23 @@ def run_corners(tbgen: h.Generator, label: str, fname: str):
         for VDD in [1620*m, 1800*m, 1980*m]
     ]
 
+    # Run conditions one at a time, parallelizing across PI codes
     for cond in conditions:
+        # Create a list of per-code tb parameters
         pvt = TbParams(**cond)
         params = [TbParams(code=code, **cond) for code in range(32)]
-        delays = [sim(tb=tbgen(p), params=p) for p in params]
+        
+        # Create the simulation inputs
+        sims = [sim_input(tb=tbgen(p), params=p) for p in params]
+
+        # Run sims
+        results = h.sim.run(sims, opts)
+
+        # Post-process the results into (code, delay) curves
+        delays = [tdelay(r) for r in results]
         delays = unwrap(delays)
-        print(delays)
+
+        # And plot the results
         label = f"{pvt.corner} {pvt.VDD} {pvt.temper}"
         ax.plot(delays * 1e12, label=label)
     

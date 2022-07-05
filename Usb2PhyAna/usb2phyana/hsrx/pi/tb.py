@@ -17,8 +17,8 @@ import s130
 import hdl21 as h
 from hdl21.pdk import Corner
 from hdl21.sim import Sim, LinearSweep, SaveMode
-from hdl21.prefix import m, n, PICO
-from hdl21.primitives import Vpulse, Vdc
+from hdl21.prefix import m, n
+from vlsirtools.spice.sim_data import SimResult
 
 # Local Imports
 from ...tests.sim_options import sim_options
@@ -32,7 +32,7 @@ class TbParams:
     code = h.Param(dtype=int, desc="PI Code", default=11)
 
 
-def sim(tb: h.Instantiable, params: TbParams) -> float:
+def sim_input(tb: h.Instantiable, params: TbParams) -> Sim:
     """ Phase Interpolator Delay Sim """
 
     print(f"Simulating PhaseInterp for code {params.code}")
@@ -58,12 +58,22 @@ def sim(tb: h.Instantiable, params: TbParams) -> float:
     """
     )
 
-    sim.include("../scs130lp.sp")  # FIXME! relies on this netlist of logic cells
-    opts = copy(sim_options)
-    opts.rundir = Path(f"./scratch/code{params.code}")
+    # FIXME! relies on this netlist of logic cells
+    sim.include("/tools/B/dan_fritchman/dev/VlsirWorkspace/Usb2Phy/Usb2PhyAna/scratch/scs130lp.sp") 
+    
+    # FIXME: handling of multi-directory sims
+    # opts = copy(sim_options)
+    # opts.rundir = Path(f"./scratch/code{params.code}")
+    
+    return sim
 
-    results = sim.run(opts)
+def tdelay(results: SimResult) -> float:
+    """ Extract the `tdelay` measurement from `results`. """
+    # results = sim.run(opts)
+    # results = sim.run(sim_options)
 
+    if not isinstance(results, SimResult):
+        raise TypeError
     print(results.an[0].measurements)
     # And return the delay value
     return results.an[0].measurements["tdelay"]
