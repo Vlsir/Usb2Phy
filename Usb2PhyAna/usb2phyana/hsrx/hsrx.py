@@ -10,6 +10,8 @@ from ..logiccells import Latch
 from ..diff import Diff
 from ..quadclock import QuadClock
 from .pi import PhaseInterp
+from .preamp import PreAmp
+from .slicer import Slicer
 
 
 @h.module
@@ -35,19 +37,6 @@ class Cdr:
 
 
 @h.module
-class Slicer:
-    """ # Slicer """
-
-    # IO
-    VDD18, VSS = h.Ports(2)
-    inp = Diff(port=True, role=Diff.Roles.SINK)
-    clk = h.Input()
-    out = h.Output()
-
-    # FIXME: actual implementation! 
-
-
-@h.module
 class Slicers:
     """ # Slicer Pack 
     Including slicing for both data and edges. 
@@ -67,18 +56,6 @@ class Slicers:
     xslicer = Slicer(inp=inp, clk=rck.n, out=edge_sliced, VDD18=VDD18, VSS=VSS)
     ## Retiming
     Latch()(d=edge_sliced, q=edge, clk=rck.p, VDD=VDD18, VSS=VSS)
-
-
-@h.module
-class PreAmp:
-    """ # RX Pre-Amp """
-
-    # IO
-    VDD33, VSS = h.Ports(2)
-    inp = Diff(port=True, role=Diff.Roles.SINK)
-    out = Diff(port=True, role=Diff.Roles.SOURCE)
-
-    # FIXME: actual implementation! 
 
 
 @h.module

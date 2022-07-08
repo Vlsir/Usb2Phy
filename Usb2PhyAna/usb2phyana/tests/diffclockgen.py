@@ -6,22 +6,22 @@ For simulation, from ideal pulse voltage sources
 
 # Hdl & PDK Imports
 import hdl21 as h
+import hdl21.sim as hs 
 from hdl21.primitives import Vpulse
 
 # Local Imports
 from ..diff import Diff
 
 
-
 @h.paramclass
 class DiffClkParams:
     """ Differential Clock Generator Parameters """
 
-    period = h.Param(dtype=h.Prefixed, desc="Period")
-    delay = h.Param(dtype=h.Prefixed, desc="Delay")
-    vd = h.Param(dtype=h.Prefixed, desc="Differential Voltage")
-    vc = h.Param(dtype=h.Prefixed, desc="Common-Mode Voltage")
-    trf = h.Param(dtype=h.Prefixed, desc="Rise / Fall Time")
+    period = h.Param(dtype=hs.ParamVal, desc="Period")
+    delay = h.Param(dtype=hs.ParamVal, desc="Delay")
+    vd = h.Param(dtype=hs.ParamVal, desc="Differential Voltage")
+    vc = h.Param(dtype=hs.ParamVal, desc="Common-Mode Voltage")
+    trf = h.Param(dtype=hs.ParamVal, desc="Rise / Fall Time")
 
 
 @h.generator
