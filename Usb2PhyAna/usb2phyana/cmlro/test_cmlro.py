@@ -18,7 +18,7 @@ import hdl21 as h
 import hdl21.sim as hs 
 from hdl21.pdk import Corner
 from hdl21.sim import Sim, LogSweep
-from hdl21.prefix import m, µ, f, n, T, K
+from hdl21.prefix import m, µ, f, n, p, T, K
 from hdl21.primitives import Vdc, Vpulse, Idc, C
 import s130 
 import sitepdks as _
@@ -27,7 +27,7 @@ from ..tests.sim_options import sim_options
 
 # DUT Imports
 from ..cmlparams import CmlParams
-from .cmlro import CmlRo
+from .cmlro import CmlRo, CmlIlDco
 
 
 @h.paramclass
@@ -60,10 +60,29 @@ def CmlRoFreqTb(params: TbParams) -> h.Module:
 
     # Bias Generation
     tb.ibias = ibias = h.Signal()
+    # Nmos Side Bias
     tb.ii = Idc(Idc.Params(dc=-1 * params.cml.ib))(p=ibias, n=tb.VSS)
+    # Pmos Side Bias
+    # tb.ii = Idc(Idc.Params(dc=params.cml.ib))(p=ibias, n=tb.VSS)
 
-    # Create the CmlRo DUT 
-    tb.dut = CmlRo(params.cml)(ibias=ibias, VDD=VDD, VSS=tb.VSS)
+    # Signals for the RO stages
+    tb.stg0 = stg0 = h.Diff()
+    tb.stg1 = stg1 = h.Diff()
+    tb.stg2 = stg2 = h.Diff()
+    tb.stg3 = stg3 = h.Diff()
+
+    # Create the DUT 
+    # Dut = CmlRo(params.cml)
+    # tb.dut = CmlRo(params.cml)(stg0=stg0, stg1=stg1, stg2=stg2, stg3=stg3, ibias=ibias, VDD=VDD, VSS=tb.VSS)
+
+    # Create the DUT 
+    # tb.fctrl = fctrl = h.Signal(width=5)
+    fctrl = h.Concat(tb.VDD, tb.VSS, tb.VSS, tb.VSS, tb.VSS)
+    tb.refclk = h.Signal()
+    # tb.vrefclk = Vpulse(Vpulse.Params(delay=5 * n, v1=0, v2=params.pvt.v, period=32 * n, rise=100 * p, fall=100 * p, width=16 * n))(p=tb.refclk, n=tb.VSS)
+    tb.vrefclk = Vdc(Vdc.Params(dc=0))(p=tb.refclk, n=tb.VSS)
+    tb.dut = CmlIlDco(params.cml)(stg0=stg0, stg1=stg1, stg2=stg2, stg3=stg3, ibias=ibias, refclk=tb.refclk, fctrl=fctrl, VDD=VDD, VSS=tb.VSS)
+
     return tb
 
 
@@ -96,7 +115,7 @@ def run_corners(tbgen: h.Generator) -> Result:
     ]
 
     # Initialize our results
-    ibs = [val*µ for val in range(5, 100, 5)]
+    ibs = [val * µ for val in range(5, 100, 5)]
     rls = [1.0 / float(i) for i in ibs]
     result = Result(
         conditions=[(cond["p"], cond["t"]) for cond in conditions], 
@@ -112,7 +131,7 @@ def run_corners(tbgen: h.Generator) -> Result:
         # Create a list of per-voltage tb parameters
         params = [TbParams(
             pvt=Pvt(v=1800*m, **cond), 
-            cml=CmlParams(rl=r, cl=25 * f, ib=i)
+            cml=CmlParams(rl=r, cl=10 * f, ib=i)
         ) for (i, r) in zip(result.ibs, result.rls)]
         
         # Create the simulation inputs
@@ -129,12 +148,13 @@ def run_corners(tbgen: h.Generator) -> Result:
 def plot(result: Result, title: str, fname: str):
 
     fig, ax = plt.subplots()
+    ax2 = ax.twinx()
     ibs = np.array([1e6 * float(v) for v in result.ibs])
 
     for (cond, cond_results) in zip(result.conditions, result.results):
         # Post-process the results into (ib, period) curves
         freqs = np.array([1 / tperiod(r) for r in cond_results])
-        ibs = np.array([idd(r) for r in cond_results])
+        idds = np.abs(np.array([1e6 * idd(r) for r in cond_results]))
 
         # Numpy interpolation requires the x-axis array be NaN-free
         # This often happens at low Vdd, when the ring fails to oscillate, 
@@ -142,34 +162,34 @@ def plot(result: Result, title: str, fname: str):
         # Replace any such NaN values with zero. 
         # If there are any later in the array, this interpolation will fail. 
         freqs_no_nan = np.nan_to_num(freqs, copy=True, nan=0)
+        idd_480 = np.interp(x=480e6, xp=freqs_no_nan, fp=idds)
         ib_480 = np.interp(x=480e6, xp=freqs_no_nan, fp=ibs)
-        print(ib_480)
+        print(ib_480, idd_480, idd_480 / ib_480)
 
         # And plot the results
         label = str(cond) 
-        ax.plot(freqs / 1e9, np.abs(ibs), label=label)
+        ax.plot(freqs / 1e9, idds, label=label)
+        ax2.plot(freqs / 1e9, ibs)
     
     # Set up all the other data on our plot
     ax.set_title(title)
     ax.set_xlabel("Freq (GHz)")
-    ax.set_ylabel("Ib (µA)")
+    ax.set_ylabel("Idd (µA)")
     ax.legend()
 
     # And save it to file
     fig.savefig(fname)
 
 
-def idd(results: "SimResult") -> float:
+def idd(results: hs.SimResult) -> float:
     return results.an[0].measurements["idd"]
 
-def tperiod(results: "SimResult") -> float:
+def tperiod(results: hs.SimResult) -> float:
     return results.an[0].measurements["tperiod"]
 
 
 def sim_input(tbgen: h.Generator, params: TbParams) -> hs.Sim:
     """ CmlRo Frequency Sim """
-
-    print(f"Simulating CmlRo for voltage {params.pvt.v}")
 
     # Create some simulation stimulus
     @hs.sim
@@ -188,14 +208,18 @@ def sim_input(tbgen: h.Generator, params: TbParams) -> hs.Sim:
         idd = hs.Meas(tr, expr="avg I(xtop.vvdd) from=trise5 to=trise15")
 
         # The stuff we can't first-class represent, and need to stick in a literal. 
-        _ = hs.Literal(
+        l = hs.Literal(
             f"""
             simulator lang=spice
-            .ic xtop.dut.stg0_p 0
+            .ic xtop.stg0_p 900m
+            .ic xtop.stg0_n 0
             .temp {params.pvt.t}
             .option autostop
             simulator lang=spectre
         """) 
+
+        # FIXME! relies on this netlist of logic cells
+        i = hs.Include("/tools/B/dan_fritchman/dev/VlsirWorkspace/Usb2Phy/Usb2PhyAna/scratch/scs130lp.sp") 
 
     # Add the PDK dependencies 
     CmlRoSim.add(*s130.install.include(params.pvt.p))
@@ -209,16 +233,22 @@ def sim_input(tbgen: h.Generator, params: TbParams) -> hs.Sim:
 
 def run_typ():
     """ Run a typical-case sim """
+    
+    print("Running Typical Conditions")
     params = TbParams(
         pvt=Pvt(), 
-        cml=CmlParams(rl=20 * K, cl=25 * f, ib=50 * µ)
+        cml=CmlParams(rl=30 * K, cl=10 * f, ib=30 * µ)
     )
     results = sim_input(CmlRoFreqTb, params).run(sim_options)
+    
+    print("Typical Conditions:")
     print(results)
 
 
 def test_cml_freq():
     """ CmlRo Frequence Test(s) """
+
+    run_typ()
 
     # Run corner simulations to get results 
     result = run_corners(CmlRoFreqTb)

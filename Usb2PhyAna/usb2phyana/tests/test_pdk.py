@@ -11,6 +11,7 @@ import s130
 from s130 import MosParams, IoMosParams
 
 import hdl21 as h
+import hdl21.sim as hs
 from hdl21.pdk import Corner
 from hdl21.sim import Sim, LogSweep, LinearSweep
 from hdl21.prefix import e, m, µ
@@ -74,10 +75,6 @@ def test_iv():
         res = iv(dut)
         print(res)
 
-    
-    # Run the sim 
-    res = sim.run(sim_options)
-
     # And munge some results 
     res = res.an[0]  # Get the DC sweep
     print(res.measurements)
@@ -92,7 +89,7 @@ def test_iv():
     # np.save("gm_over_id.npy", gm_over_id)
 
 
-def iv(Dut: MosDut) -> "SimResult":
+def iv(Dut: MosDut) -> hs.SimResult:
     """ Create and return an IV Curve Sim """ 
 
     @h.module
