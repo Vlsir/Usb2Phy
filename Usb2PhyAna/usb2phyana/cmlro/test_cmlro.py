@@ -1,6 +1,6 @@
 
 """ 
-# ILO Tests 
+# CML RO Tests 
 """
 
 import pickle
@@ -18,15 +18,16 @@ import hdl21 as h
 import hdl21.sim as hs 
 from hdl21.pdk import Corner
 from hdl21.sim import Sim, LogSweep
-from hdl21.prefix import m, µ, f, n, T, PICO
+from hdl21.prefix import m, µ, f, n, T, K
 from hdl21.primitives import Vdc, Vpulse, Idc, C
 import s130 
 import sitepdks as _
 
-from ...tests.sim_options import sim_options
+from ..tests.sim_options import sim_options
 
 # DUT Imports
-from .ilo import Ilo, IloParams
+from ..cmlparams import CmlParams
+from .cmlro import CmlRo
 
 
 @h.paramclass
@@ -40,96 +41,42 @@ class Pvt:
 
 @h.paramclass
 class TbParams:
+    # Required CML Generator Params
+    cml = h.Param(dtype=CmlParams, desc="Cml Generator Parameters")
+    # PVT Conditions 
     pvt = h.Param(dtype=Pvt, desc="Process, Voltage, and Temperature Parameters", default=Pvt())
-    ilo = h.Param(dtype=IloParams, desc="Ilo Generator Parameters", default=IloParams())
 
 
 @h.generator
-def IloInjectionTb(params: TbParams) -> h.Module:
-    """ Ilo Testbench """
+def CmlRoFreqTb(params: TbParams) -> h.Module:
+    """ CmlRo Frequency Testbench """
 
     # Create our testbench 
-    tb = h.sim.tb("IloTb")
+    tb = h.sim.tb("CmlRoTb")
 
     # Generate and drive VDD
     tb.VDD = VDD = h.Signal()
     tb.vvdd = Vdc(Vdc.Params(dc=params.pvt.v))(p=VDD, n=tb.VSS)
 
-    # Create the injection-pulse source, 
-    # which also serves as our kick-start
-    tb.inj = h.Signal()
-    tb.vinj = Vpulse(Vpulse.Params(
-            v1=0,
-            v2=1800*m,
-            period=9900 * PICO,
-            rise=10 * PICO,
-            fall=10 * PICO,
-            width=1500 * PICO,
-            delay=0)
-        )(p=tb.inj, n=tb.VSS)
+    # Bias Generation
+    tb.ibias = ibias = h.Signal()
+    tb.ii = Idc(Idc.Params(dc=-1 * params.cml.ib))(p=ibias, n=tb.VSS)
 
-    # Create the Ilo DUT 
-    tb.dut = Ilo(params.ilo)(
-         inj=tb.inj, VDD18=VDD, VSS=tb.VSS,
-    )
-    return tb
-
-
-def test_ilo_sim():
-    """ Ilo Test(s) """
-
-    # Create our parametric testbench 
-    params = TbParams(pvt=Pvt(v=900*m), cl = 30*f)
-    tb = IloInjectionTb(params)
-
-    # And simulation input for it 
-    sim = Sim(tb=tb, attrs=s130.install.include(Corner.TYP))
-    sim.tran(tstop=20*n)
-    
-    # Run some spice
-    results = sim.run(sim_options)
-    print(results)
-
-
-@h.generator
-def IloFreqTb(params: TbParams) -> h.Module:
-    """ Ilo Frequency Testbench """
-
-    # Create our testbench 
-    tb = h.sim.tb("IloTb")
-
-    # Generate and drive VDD
-    tb.VDD = VDD = h.Signal()
-    tb.vvdd = Vdc(Vdc.Params(dc=params.pvt.v))(p=VDD, n=tb.VSS)
-
-    # Create the injection-pulse source, which in this bench serves entirely as a kick-start
-    tb.inj = h.Signal()
-    tb.vinj = Vpulse(Vpulse.Params(
-            v1=1800*m,
-            v2=0,
-            period=1001, # "Infinite" period
-            rise=10 * PICO,
-            fall=10 * PICO,
-            width=1000,
-            delay=10 * PICO)
-        )(p=tb.inj, n=tb.VSS)
-
-    # Create the Ilo DUT 
-    tb.dut = Ilo(params.ilo)(
-         inj=tb.inj, VDD18=VDD, VSS=tb.VSS,
-    )
+    # Create the CmlRo DUT 
+    tb.dut = CmlRo(params.cml)(ibias=ibias, VDD=VDD, VSS=tb.VSS)
     return tb
 
 
 @dataclass 
 class Result:
-    """ Result of the (V,F) Sweep, Parameterized across Process and Temp """
+    """ Result of the (I,F) Sweep, Parameterized across Process and Temp """
 
     # Process, Temperature Conditions 
     conditions: List[Tuple[Corner, int]]
-    # Vdds per Process, Temperature Condition
-    vdds: List[h.Prefixed]
-    # Sim Results, per Vdd Point 
+    # List of bias currents and resistive loads, maintaining swing 
+    ibs: List[h.ScalarParam]
+    rls: List[h.ScalarParam]
+    # Sim Results, per (P,T), per (ib,rl) Point 
     results: List[List[hs.SimResult]]
 
 
@@ -149,21 +96,24 @@ def run_corners(tbgen: h.Generator) -> Result:
     ]
 
     # Initialize our results
+    ibs = [val*µ for val in range(5, 100, 5)]
+    rls = [1.0 / float(i) for i in ibs]
     result = Result(
         conditions=[(cond["p"], cond["t"]) for cond in conditions], 
-        vdds = [val*m for val in range(200, 2100, 100)],
+        ibs = ibs,
+        rls = rls,
         results=[]
     )
 
     # Run conditions one at a time, parallelizing across PI codes
     for cond in conditions:
-        print(f"Simulating (vdd, freq) for {cond}")
+        print(f"Simulating (ib, freq) for {cond}")
 
         # Create a list of per-voltage tb parameters
         params = [TbParams(
-            pvt=Pvt(v=v, **cond), 
-            ilo=IloParams(cl=30*f)
-        ) for v in result.vdds]
+            pvt=Pvt(v=1800*m, **cond), 
+            cml=CmlParams(rl=r, cl=25 * f, ib=i)
+        ) for (i, r) in zip(result.ibs, result.rls)]
         
         # Create the simulation inputs
         sims = [sim_input(tbgen=tbgen, params=p) for p in params]
@@ -171,22 +121,20 @@ def run_corners(tbgen: h.Generator) -> Result:
         # Run sims
         condition_results = h.sim.run(sims, opts)
         result.results.append(condition_results)
-
     
-    pickle.dump(asdict(result), open("result.pkl", "wb"))
+    pickle.dump(asdict(result), open("cmlro.freq.pkl", "wb"))
 
     return result
 
 def plot(result: Result, title: str, fname: str):
 
     fig, ax = plt.subplots()
-    ax2 = ax.twinx()
-    vdds = np.array([1000 * float(v) for v in result.vdds])
+    ibs = np.array([1e6 * float(v) for v in result.ibs])
 
     for (cond, cond_results) in zip(result.conditions, result.results):
-        # Post-process the results into (vdd, period) curves
+        # Post-process the results into (ib, period) curves
         freqs = np.array([1 / tperiod(r) for r in cond_results])
-        idds = np.array([idd(r) for r in cond_results])
+        ibs = np.array([idd(r) for r in cond_results])
 
         # Numpy interpolation requires the x-axis array be NaN-free
         # This often happens at low Vdd, when the ring fails to oscillate, 
@@ -194,20 +142,17 @@ def plot(result: Result, title: str, fname: str):
         # Replace any such NaN values with zero. 
         # If there are any later in the array, this interpolation will fail. 
         freqs_no_nan = np.nan_to_num(freqs, copy=True, nan=0)
-        idd_480 = np.interp(x=480e6, xp=freqs_no_nan, fp=idds)
-        vdd_480 = np.interp(x=480e6, xp=freqs_no_nan, fp=vdds)
-        print(cond, vdd_480, idd_480)
+        ib_480 = np.interp(x=480e6, xp=freqs_no_nan, fp=ibs)
+        print(ib_480)
 
         # And plot the results
         label = str(cond) 
-        ax.plot(freqs / 1e9, np.abs(idds), label=label)
-        ax2.plot(freqs / 1e9, vdds)
+        ax.plot(freqs / 1e9, np.abs(ibs), label=label)
     
     # Set up all the other data on our plot
     ax.set_title(title)
     ax.set_xlabel("Freq (GHz)")
-    ax.set_ylabel("Idd (A)")
-    ax2.set_ylabel("Vdd (mV)")
+    ax.set_ylabel("Ib (µA)")
     ax.legend()
 
     # And save it to file
@@ -222,13 +167,13 @@ def tperiod(results: "SimResult") -> float:
 
 
 def sim_input(tbgen: h.Generator, params: TbParams) -> hs.Sim:
-    """ Ilo Frequency Sim """
+    """ CmlRo Frequency Sim """
 
-    print(f"Simulating Ilo for voltage {params.pvt.v}")
+    print(f"Simulating CmlRo for voltage {params.pvt.v}")
 
     # Create some simulation stimulus
     @hs.sim
-    class IloSim:
+    class CmlRoSim:
         # The testbench 
         tb = tbgen(params)
 
@@ -246,29 +191,40 @@ def sim_input(tbgen: h.Generator, params: TbParams) -> hs.Sim:
         _ = hs.Literal(
             f"""
             simulator lang=spice
+            .ic xtop.dut.stg0_p 0
             .temp {params.pvt.t}
             .option autostop
             simulator lang=spectre
         """) 
 
     # Add the PDK dependencies 
-    IloSim.add(*s130.install.include(params.pvt.p))
+    CmlRoSim.add(*s130.install.include(params.pvt.p))
 
     # # FIXME: handling of multi-directory sims
     # opts = copy(sim_options)
     # opts.rundir = Path(f"./scratch/")
     
-    return IloSim
+    return CmlRoSim
 
 
-def test_ilo_freq():
-    """ Ilo Frequence Test(s) """
+def run_typ():
+    """ Run a typical-case sim """
+    params = TbParams(
+        pvt=Pvt(), 
+        cml=CmlParams(rl=20 * K, cl=25 * f, ib=50 * µ)
+    )
+    results = sim_input(CmlRoFreqTb, params).run(sim_options)
+    print(results)
+
+
+def test_cml_freq():
+    """ CmlRo Frequence Test(s) """
 
     # Run corner simulations to get results 
-    result = run_corners(IloFreqTb)
+    result = run_corners(CmlRoFreqTb)
 
     # Or just read them back from file, if we have one
-    # result = Result(**pickle.load(open("result.pkl", "rb")))
+    # result = Result(**pickle.load(open("cmlro.freq.pkl", "rb")))
 
     # And make some pretty pictures
-    plot(result, "IloFreq", "IloFreq.png")
+    plot(result, "CmlRoFreq", "CmlRoFreq.png")
