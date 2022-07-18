@@ -23,11 +23,11 @@ from hdl21.primitives import Vdc, Vpulse, Idc, C
 import s130 
 import sitepdks as _
 
-from ..tests.sim_options import sim_options
-
-# DUT Imports
-from ..cmlparams import CmlParams
-from .cmlro import CmlRo, CmlIlDco
+# Local Imports
+from ...tests.sim_options import sim_options
+# from ...tests.vcode import VCode
+from ...cmlparams import CmlParams
+from ..cmlro import CmlRo, CmlIlDco
 
 
 @h.paramclass
@@ -219,7 +219,7 @@ def sim_input(tbgen: h.Generator, params: TbParams) -> hs.Sim:
         """) 
 
         # FIXME! relies on this netlist of logic cells
-        i = hs.Include("/tools/B/dan_fritchman/dev/VlsirWorkspace/Usb2Phy/Usb2PhyAna/scratch/scs130lp.sp") 
+        i = hs.Include("/tools/B/dan_fritchman/dev/VlsirWorkspace/Usb2Phy/Usb2PhyAna/resources/scs130lp.sp") 
 
     # Add the PDK dependencies 
     CmlRoSim.add(*s130.install.include(params.pvt.p))

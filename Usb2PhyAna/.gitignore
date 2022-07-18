@@ -3,6 +3,7 @@
 ## Custom Additions
 ## 
 
+resources 
 scratch 
 **/__pycache__
 **/*.so
