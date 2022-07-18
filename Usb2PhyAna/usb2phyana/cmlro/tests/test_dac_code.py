@@ -65,7 +65,6 @@ def run_corners(tbgen: h.Generator) -> Result:
         result.results.append(condition_results)
     
     pickle.dump(asdict(result), open("cmlro.dac.pkl", "wb"))
-
     return result
 
 
@@ -91,6 +90,7 @@ def codesweep(tbgen: h.Generator, pvt: Pvt) -> List[hs.SimResult]:
 
 
 def plot(result: Result, title: str, fname: str):
+    """ Plot a `Result` and save to file `fname` """
 
     fig, ax = plt.subplots()
     codes = np.array(result.codes)
@@ -107,17 +107,22 @@ def plot(result: Result, title: str, fname: str):
         # If there are any later in the array, this interpolation will fail. 
         freqs_no_nan = np.nan_to_num(freqs, copy=True, nan=0)
         idd_480 = np.interp(x=480e6, xp=freqs_no_nan, fp=idds)
-        print(idd_480)
+        # print(idd_480)
+
+        # Check for non-monotonic frequencies
+        freq_steps = np.diff(freqs_no_nan)
+        if np.any(freq_steps < 0):
+            print(cond)
 
         # And plot the results
-        label = str(cond) 
+        label = f"{str(cond.p), str(cond.v.number), str(cond.t)}"
         ax.plot(codes, freqs / 1e9, label=label)
     
     # Set up all the other data on our plot
     ax.set_title(title)
     ax.set_xlabel("Dac Code")
     ax.set_ylabel("Freq (GHz)")
-    ax.legend()
+    # ax.legend()
 
     # And save it to file
     fig.savefig(fname)

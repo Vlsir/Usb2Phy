@@ -30,6 +30,13 @@ from ...cmlparams import CmlParams
 from ..cmlro import CmlRo, CmlIlDco
 
 
+# Module-wide reused param values
+cml = CmlParams(rl=30 * K, cl=10 * f, ib=30 * µ)
+ibs = [val * µ for val in range(5, 50, 5)]
+rls = [cml.rl] * len(ibs) 
+# rls = [1.0 / float(ib) for ib in ibs] 
+
+
 @h.paramclass
 class Pvt:
     """ Process, Voltage, and Temperature Parameters """
@@ -59,11 +66,12 @@ def CmlRoFreqTb(params: TbParams) -> h.Module:
     tb.vvdd = Vdc(Vdc.Params(dc=params.pvt.v))(p=VDD, n=tb.VSS)
 
     # Bias Generation
-    tb.ibias = ibias = h.Signal()
-    # Nmos Side Bias
-    tb.ii = Idc(Idc.Params(dc=-1 * params.cml.ib))(p=ibias, n=tb.VSS)
     # Pmos Side Bias
-    # tb.ii = Idc(Idc.Params(dc=params.cml.ib))(p=ibias, n=tb.VSS)
+    tb.pbias = pbias = h.Signal()
+    tb.ii = Idc(Idc.Params(dc=params.cml.ib))(p=pbias, n=tb.VSS)
+    # Nmos Side Bias
+    # tb.nbias = nbias = h.Signal()
+    # tb.ii = Idc(Idc.Params(dc=-1 * params.cml.ib))(p=nbias, n=tb.VSS)
 
     # Signals for the RO stages
     tb.stg0 = stg0 = h.Diff()
@@ -72,120 +80,9 @@ def CmlRoFreqTb(params: TbParams) -> h.Module:
     tb.stg3 = stg3 = h.Diff()
 
     # Create the DUT 
-    # Dut = CmlRo(params.cml)
-    # tb.dut = CmlRo(params.cml)(stg0=stg0, stg1=stg1, stg2=stg2, stg3=stg3, ibias=ibias, VDD=VDD, VSS=tb.VSS)
-
-    # Create the DUT 
-    # tb.fctrl = fctrl = h.Signal(width=5)
-    fctrl = h.Concat(tb.VDD, tb.VSS, tb.VSS, tb.VSS, tb.VSS)
-    tb.refclk = h.Signal()
-    # tb.vrefclk = Vpulse(Vpulse.Params(delay=5 * n, v1=0, v2=params.pvt.v, period=32 * n, rise=100 * p, fall=100 * p, width=16 * n))(p=tb.refclk, n=tb.VSS)
-    tb.vrefclk = Vdc(Vdc.Params(dc=0))(p=tb.refclk, n=tb.VSS)
-    tb.dut = CmlIlDco(params.cml)(stg0=stg0, stg1=stg1, stg2=stg2, stg3=stg3, ibias=ibias, refclk=tb.refclk, fctrl=fctrl, VDD=VDD, VSS=tb.VSS)
+    tb.dut = CmlRo(params.cml)(stg0=stg0, stg1=stg1, stg2=stg2, stg3=stg3, pbias=pbias, VDD=VDD, VSS=tb.VSS)
 
     return tb
-
-
-@dataclass 
-class Result:
-    """ Result of the (I,F) Sweep, Parameterized across Process and Temp """
-
-    # Process, Temperature Conditions 
-    conditions: List[Tuple[Corner, int]]
-    # List of bias currents and resistive loads, maintaining swing 
-    ibs: List[h.ScalarParam]
-    rls: List[h.ScalarParam]
-    # Sim Results, per (P,T), per (ib,rl) Point 
-    results: List[List[hs.SimResult]]
-
-
-def run_corners(tbgen: h.Generator) -> Result:
-    """ Run `sim` on `tbgen`, across corners """
-
-    opts = copy(sim_options)
-    opts.rundir = None
-
-    # (P,T) Conditions 
-    conditions = [{
-            "p": corner,
-            "t": temper,
-        }
-        for corner in [Corner.TYP, Corner.FAST, Corner.SLOW]
-        for temper in [-25, 25, 75]
-    ]
-
-    # Initialize our results
-    ibs = [val * µ for val in range(5, 100, 5)]
-    rls = [1.0 / float(i) for i in ibs]
-    result = Result(
-        conditions=[(cond["p"], cond["t"]) for cond in conditions], 
-        ibs = ibs,
-        rls = rls,
-        results=[]
-    )
-
-    # Run conditions one at a time, parallelizing across PI codes
-    for cond in conditions:
-        print(f"Simulating (ib, freq) for {cond}")
-
-        # Create a list of per-voltage tb parameters
-        params = [TbParams(
-            pvt=Pvt(v=1800*m, **cond), 
-            cml=CmlParams(rl=r, cl=10 * f, ib=i)
-        ) for (i, r) in zip(result.ibs, result.rls)]
-        
-        # Create the simulation inputs
-        sims = [sim_input(tbgen=tbgen, params=p) for p in params]
-
-        # Run sims
-        condition_results = h.sim.run(sims, opts)
-        result.results.append(condition_results)
-    
-    pickle.dump(asdict(result), open("cmlro.freq.pkl", "wb"))
-
-    return result
-
-def plot(result: Result, title: str, fname: str):
-
-    fig, ax = plt.subplots()
-    ax2 = ax.twinx()
-    ibs = np.array([1e6 * float(v) for v in result.ibs])
-
-    for (cond, cond_results) in zip(result.conditions, result.results):
-        # Post-process the results into (ib, period) curves
-        freqs = np.array([1 / tperiod(r) for r in cond_results])
-        idds = np.abs(np.array([1e6 * idd(r) for r in cond_results]))
-
-        # Numpy interpolation requires the x-axis array be NaN-free
-        # This often happens at low Vdd, when the ring fails to oscillate, 
-        # or goes slower than we care to simulate. 
-        # Replace any such NaN values with zero. 
-        # If there are any later in the array, this interpolation will fail. 
-        freqs_no_nan = np.nan_to_num(freqs, copy=True, nan=0)
-        idd_480 = np.interp(x=480e6, xp=freqs_no_nan, fp=idds)
-        ib_480 = np.interp(x=480e6, xp=freqs_no_nan, fp=ibs)
-        print(ib_480, idd_480, idd_480 / ib_480)
-
-        # And plot the results
-        label = str(cond) 
-        ax.plot(freqs / 1e9, idds, label=label)
-        ax2.plot(freqs / 1e9, ibs)
-    
-    # Set up all the other data on our plot
-    ax.set_title(title)
-    ax.set_xlabel("Freq (GHz)")
-    ax.set_ylabel("Idd (µA)")
-    ax.legend()
-
-    # And save it to file
-    fig.savefig(fname)
-
-
-def idd(results: hs.SimResult) -> float:
-    return results.an[0].measurements["idd"]
-
-def tperiod(results: hs.SimResult) -> float:
-    return results.an[0].measurements["tperiod"]
 
 
 def sim_input(tbgen: h.Generator, params: TbParams) -> hs.Sim:
@@ -196,6 +93,8 @@ def sim_input(tbgen: h.Generator, params: TbParams) -> hs.Sim:
     class CmlRoSim:
         # The testbench 
         tb = tbgen(params)
+
+        # op = hs.Op()
 
         # Our sole analysis: transient, for much longer than we need. 
         # But auto-stopping when measurements complete. 
@@ -224,11 +123,113 @@ def sim_input(tbgen: h.Generator, params: TbParams) -> hs.Sim:
     # Add the PDK dependencies 
     CmlRoSim.add(*s130.install.include(params.pvt.p))
 
-    # # FIXME: handling of multi-directory sims
-    # opts = copy(sim_options)
-    # opts.rundir = Path(f"./scratch/")
-    
     return CmlRoSim
+
+
+def ibias_sweep(tbgen: h.Generator, pvt: Pvt) -> List[hs.SimResult]:
+    """ Sweep `sim` on `tbgen` at conditions `pvt`.  """
+
+    opts = copy(sim_options)
+    opts.rundir = None
+
+    params = [
+        TbParams(
+            pvt=pvt, 
+            cml=CmlParams(ib=i, rl=r, cl=10 * f)
+        ) 
+        for (i, r) in zip(ibs, rls)
+    ]
+    
+    # Create the simulation inputs
+    sims = [sim_input(tbgen=tbgen, params=p) for p in params]
+
+    # Run sims
+    return h.sim.run(sims, opts)
+
+
+@dataclass 
+class Result:
+    """ Result of the (I,F) Sweep, Parameterized across Process and Temp """
+
+    # Process, Temperature Conditions 
+    conditions: List[Pvt]
+    # List of bias currents and resistive loads, maintaining swing 
+    ibs: List[h.ScalarParam]
+    rls: List[h.ScalarParam]
+    # Sim Results, per (P,T), per (ib,rl) Point 
+    results: List[List[hs.SimResult]]
+
+
+def run_corners(tbgen: h.Generator) -> Result:
+    """ Run `sim` on `tbgen`, across corners """
+
+    # Initialize our results
+    conditions=[
+        Pvt(p,v,t) 
+        for p in [Corner.TYP, Corner.FAST, Corner.SLOW]
+        for v in [1620*m, 1800*m, 1980*m]
+        for t in [-25, 25, 75]
+    ]
+    result = Result(
+        conditions=conditions, 
+        ibs=ibs,
+        rls=rls,
+        results=[]
+    )
+
+    # Run conditions one at a time, parallelizing across PI codes
+    for cond in conditions:
+        print(f"Simulating (ib, freq) for {cond}")
+        condition_results = ibias_sweep(tbgen, cond)
+        result.results.append(condition_results)
+
+    pickle.dump(asdict(result), open("cmlro.freq.pkl", "wb"))
+    return result
+
+
+def plot(result: Result, title: str, fname: str):
+    """ Plot a `Result` and save to file `fname` """
+
+    fig, ax = plt.subplots()
+    ibs = np.array([1e6 * float(v) for v in result.ibs])
+
+    for (cond, cond_results) in zip(result.conditions, result.results):
+        # Post-process the results into (ib, period) curves
+        freqs = np.array([1 / tperiod(r) for r in cond_results])
+        print(freqs)
+        if np.max(freqs) < 480e6:
+            print(cond)
+        idds = np.abs(np.array([1e6 * idd(r) for r in cond_results]))
+
+        # Numpy interpolation requires the x-axis array be NaN-free
+        # This often happens at low Vdd, when the ring fails to oscillate, 
+        # or goes slower than we care to simulate. 
+        # Replace any such NaN values with zero. 
+        # If there are any later in the array, this interpolation will fail. 
+        freqs_no_nan = np.nan_to_num(freqs, copy=True, nan=0)
+        idd_480 = np.interp(x=480e6, xp=freqs_no_nan, fp=idds)
+        ib_480 = np.interp(x=480e6, xp=freqs_no_nan, fp=ibs)
+        # print(ib_480, idd_480, idd_480 / ib_480)
+
+        # And plot the results
+        label = f"{str(cond.p), str(cond.v.number), str(cond.t)}"
+        ax.plot(ibs, freqs / 1e9, label=label)
+    
+    # Set up all the other data on our plot
+    ax.set_title(title)
+    ax.set_xlabel("Ib (µA)")
+    ax.set_ylabel("Freq (GHz)")
+    ax.legend()
+
+    # And save it to file
+    fig.savefig(fname)
+
+
+def idd(results: hs.SimResult) -> float:
+    return results.an[0].measurements["idd"]
+
+def tperiod(results: hs.SimResult) -> float:
+    return results.an[0].measurements["tperiod"]
 
 
 def run_typ():
@@ -236,8 +237,8 @@ def run_typ():
     
     print("Running Typical Conditions")
     params = TbParams(
-        pvt=Pvt(), 
-        cml=CmlParams(rl=30 * K, cl=10 * f, ib=30 * µ)
+        pvt=Pvt(), ##(p=Corner.FAST, v=1980*m, t=75), 
+        cml=cml
     )
     results = sim_input(CmlRoFreqTb, params).run(sim_options)
     
@@ -250,11 +251,11 @@ def test_cml_freq():
 
     run_typ()
 
-    # Run corner simulations to get results 
-    result = run_corners(CmlRoFreqTb)
+    # # Run corner simulations to get results 
+    # result = run_corners(CmlRoFreqTb)
 
     # Or just read them back from file, if we have one
-    # result = Result(**pickle.load(open("cmlro.freq.pkl", "rb")))
+    result = Result(**pickle.load(open("cmlro.freq.pkl", "rb")))
 
     # And make some pretty pictures
-    plot(result, "CmlRoFreq", "CmlRoFreq.png")
+    plot(result, "Cml Ro - Freq vs Ibias", "CmlRoFreqIbias.png")

@@ -4,7 +4,8 @@
 
 # Hdl & PDK Imports
 import hdl21 as h
-from hdl21.primitives import Res, Cap 
+from hdl21.primitives import Res, Cap, Vdc
+from hdl21.prefix import m 
 import s130
 from s130 import MosParams
 
@@ -13,6 +14,7 @@ from ..cmlparams import CmlParams
 from ..width import Width
 
 
+Nmos = s130.modules.nmos
 NmosLvt = s130.modules.nmos_lvt
 Pmos = s130.modules.pmos
 
@@ -20,6 +22,7 @@ Pmos = s130.modules.pmos
 Pswitch = Pmos(MosParams(m=10))
 Pbias = Pmos(MosParams(w=1, l=1, m=100))
 Nswitch = NmosLvt(MosParams(m=10))
+Nload = Nmos(MosParams(w=1, l=1, m=10))
 Nbias = NmosLvt(MosParams(w=1, l=1, m=100))
 
 
@@ -57,9 +60,8 @@ def NmosCmlStage(params: CmlParams) -> h.Module:
 
 @h.generator
 def PmosCmlStage(params: CmlParams) -> h.Module:
-    """ # CML Delay Buffer """
+    """ # Pmos Input Cml Stage """
 
-    Rl = Res(Res.Params(r=params.rl))
     Cl = Cap(Cap.Params(c=params.cl))
 
     @h.module
@@ -72,19 +74,48 @@ def PmosCmlStage(params: CmlParams) -> h.Module:
         o = h.Diff(port=True, role=h.Diff.Roles.SOURCE)
         
         ## Gate Bias for Current Sources
-        bias = h.Input()
+        pbias = h.Input()
+        nbias = h.Port()
 
         # Internal Implementation
         ## Current Bias
-        pi = Pbias(g=bias, s=VDD, b=VDD)
+        pi = Pbias(g=pbias, s=VDD, b=VDD)
         ## Input Pair
-        ps = h.Pair(Pswitch)(s=pi.d, g=i, d=h.inverse(o), b=VDD)
-        ## Load Resistors
-        rl = h.Pair(Rl)(p=o, n=VSS)
+        ps = h.Pair(Pbias)(s=pi.d, g=i, d=h.inverse(o), b=VDD)
+        ## Load Nmos
+        nl = h.Pair(Nload)(d=o, g=nbias, s=VSS, b=VSS)
         ## Load Caps
         cl = h.Pair(Cl)(p=o, n=VSS)
 
     return PmosCmlStage
+
+
+@h.generator
+def BiasStage(params: CmlParams) -> h.Module:
+    """ "Dummy" Stage for Gnerating Nmos Load Bias 
+    Same as the normal stages, but with 2x the current, and producing the `nbias` output. """
+
+    Cl = Cap(Cap.Params(c=params.cl))
+
+    @h.module
+    class BiasStage:
+        # IO Interface
+        VDD, VSS = h.Ports(2)
+        pbias, swing = h.Inputs(2)
+        nbias = h.Output() 
+
+        # Internal Implementation
+        fb = h.Signal()
+        ## Current Bias
+        pi = 2 * Pbias(g=pbias, s=VDD, b=VDD)
+        ## Input Pair
+        prf = Pswitch(s=pi.d, g=swing, d=nbias, b=VDD)
+        pfb = Pswitch(s=pi.d, g=fb, d=fb, b=VDD)
+        ## Load Nmos
+        ndi = Nload(d=nbias, g=nbias, s=VSS, b=VSS)
+        nld = Nload(d=fb, g=nbias, s=VSS, b=VSS)
+
+    return BiasStage
 
 
 @h.generator
@@ -96,22 +127,31 @@ def CmlRo(params: CmlParams) -> h.Module:
         # IO Interface
         VDD, VSS = h.Ports(2)
         ## Bias input and gate
-        ibias = h.Input(desc="Current Bias Input")
+        pbias = h.Input(desc="Pmos Current Bias Input")
 
         # Internal Implementation
+        nbias = h.Signal(desc="Nmos Gate Bias")
+
         stg0 = h.Diff(port=True, role=h.Diff.Roles.SOURCE)
         stg1 = h.Diff(port=True, role=h.Diff.Roles.SOURCE)
         stg2 = h.Diff(port=True, role=h.Diff.Roles.SOURCE)
         stg3 = h.Diff(port=True, role=h.Diff.Roles.SOURCE)
 
         ## Delay Stages
-        i0 = PmosCmlStage(params)(i=stg0, o=stg1, bias=ibias, VDD=VDD, VSS=VSS)
-        i1 = PmosCmlStage(params)(i=stg1, o=stg2, bias=ibias, VDD=VDD, VSS=VSS)
-        i2 = PmosCmlStage(params)(i=stg2, o=stg3, bias=ibias, VDD=VDD, VSS=VSS)
-        i3 = PmosCmlStage(params)(i=stg3, o=h.inverse(stg0), bias=ibias, VDD=VDD, VSS=VSS)
+        i0 = PmosCmlStage(params)(i=stg0, o=stg1, pbias=pbias, nbias=nbias, VDD=VDD, VSS=VSS)
+        i1 = PmosCmlStage(params)(i=stg1, o=stg2, pbias=pbias, nbias=nbias, VDD=VDD, VSS=VSS)
+        i2 = PmosCmlStage(params)(i=stg2, o=stg3, pbias=pbias, nbias=nbias, VDD=VDD, VSS=VSS)
+        i3 = PmosCmlStage(params)(i=stg3, o=h.inverse(stg0), pbias=pbias, nbias=nbias, VDD=VDD, VSS=VSS)
+        
+        ## Nmos Bias Generaor Stage
+        swing = h.Signal(desc="Voltage Swing Reference, will become an input")
+        vdc_swing = Vdc(Vdc.Params(dc=250 * m))(p=swing, n=VSS)
+        bias_stage = BiasStage(params)(
+            swing=swing, pbias=pbias, nbias=nbias, VDD=VDD, VSS=VSS
+        )
 
         ## Current-Bias Diode Transistor
-        pb = Pbias(g=ibias, d=ibias, s=VDD, b=VDD)
+        pb = Pbias(g=pbias, d=pbias, s=VDD, b=VDD)
 
     return CmlRo
 
@@ -258,7 +298,7 @@ def CmlIlDco(params: CmlParams) -> h.Module:
         idac = Idac()(ibias=ibias, code=fctrl, out=pbias, VDD=VDD, VSS=VSS)
         
         ## Core Ring Oscillator 
-        ro = CmlRo(params)(stg0=stg0, stg1=stg1, stg2=stg2, stg3=stg3, ibias=pbias, VDD=VDD, VSS=VSS)
+        ro = CmlRo(params)(stg0=stg0, stg1=stg1, stg2=stg2, stg3=stg3, pbias=pbias, VDD=VDD, VSS=VSS)
         
         ## Injection 
         _injection_strength = h.Concat(VSS, VSS, VDD)
