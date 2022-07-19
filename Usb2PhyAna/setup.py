@@ -32,7 +32,7 @@ setup(
         f"vlsir=={_VLSIR_VERSION}",
         f"vlsirtools=={_VLSIR_VERSION}",
         f"hdl21=={_VLSIR_VERSION}",
-        "pydantic==1.8.2",  # Note we are especially sensitive to this version of `pydantic`, see https://github.com/dan-fritchman/Hdl21/issues/15
+        "pydantic==1.9.1",
     ],
     tests_require=["pytest==7.1", "numpy", "matplotlib"], # FIXME: what `pip` incantation actually gets these installed? 
     extras_require={
