@@ -34,8 +34,8 @@ setup(
         f"hdl21=={_VLSIR_VERSION}",
         "pydantic==1.8.2",  # Note we are especially sensitive to this version of `pydantic`, see https://github.com/dan-fritchman/Hdl21/issues/15
     ],
-    tests_require=["pytest==5.2", "numpy", "matplotlib"], # FIXME: what `pip` incantation actually gets these installed? 
+    tests_require=["pytest==7.1", "numpy", "matplotlib"], # FIXME: what `pip` incantation actually gets these installed? 
     extras_require={
-        "dev": ["pytest==5.2", "coverage", "pytest-cov", "black==19.10b0", "twine", "numpy", "matplotlib"]
+        "dev": ["pytest==7.1", "coverage", "pytest-cov", "black==19.10b0", "twine", "numpy", "matplotlib"]
     },
 )
