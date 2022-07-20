@@ -12,7 +12,7 @@ from .logiccells import Inv, Flop
 
 @h.generator
 def Counter(p: Width) -> h.Module:
-    """ # Binary Counter Generator """
+    """# Binary Counter Generator"""
 
     m = h.Module()
     m.VDD, m.VSS = h.Ports(2)

@@ -20,11 +20,10 @@ Nswitch = NmosLvt(MosParams(m=10))
 Nbias = NmosLvt(MosParams(w=1, l=1, m=100))
 
 
-
 @h.generator
 def CmlLatch(p: CmlParams) -> h.Module:
-    """ # CML Latch 
-    Transparent when clock is (differentially) high. """
+    """# CML Latch
+    Transparent when clock is (differentially) high."""
 
     @h.module
     class CmlLatch:
@@ -62,7 +61,7 @@ def CmlLatch(p: CmlParams) -> h.Module:
 
 @h.generator
 def CmlDiv(p: CmlParams) -> h.Module:
-    """ # CML Clock Divider """
+    """# CML Clock Divider"""
 
     @h.module
     class CmlDiv:
@@ -82,18 +81,18 @@ def CmlDiv(p: CmlParams) -> h.Module:
         nb = Nbias(g=ibias, d=ibias, s=VSS, b=VSS)
         ## Input / Quadrature-Phase Generator Latch
         lq = CmlLatch(p)(
-            clk=inverse(clk), # Negate Clock Polarity
-            d=inverse(i), # And negate feedback of in-phase output
-            q=q, # Generates quadrature output
+            clk=inverse(clk),  # Negate Clock Polarity
+            d=inverse(i),  # And negate feedback of in-phase output
+            q=q,  # Generates quadrature output
             bias=ibias,
             VDD=VDD,
             VSS=VSS,
         )
         ## Output / In-Phase Generator Latch
         li = CmlLatch(p)(
-            clk=clk, # Positive Clock Polarity
-            d=q, 
-            q=i, # Generates in-phase output
+            clk=clk,  # Positive Clock Polarity
+            d=q,
+            q=i,  # Generates in-phase output
             bias=ibias,
             VDD=VDD,
             VSS=VSS,

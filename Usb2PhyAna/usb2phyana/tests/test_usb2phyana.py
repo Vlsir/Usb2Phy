@@ -4,7 +4,7 @@
 
 # PyPi Imports
 import numpy as np
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
 
 # HDL & PDK Imports
 import sitepdks as _
@@ -26,9 +26,8 @@ from .sim_options import sim_options
 
 
 def test_netlisting():
-    """ Test netlisting some big-picture Modules """
+    """Test netlisting some big-picture Modules"""
     import sys
     from .. import Usb2PhyAna
 
     h.netlist(h.to_proto(Usb2PhyAna), dest=sys.stdout)
-

@@ -22,10 +22,10 @@ from ...tests.sim_options import sim_options
 
 @h.paramclass
 class Pvt:
-    """ Process, Voltage, and Temperature Parameters """
+    """Process, Voltage, and Temperature Parameters"""
 
     p = h.Param(dtype=Corner, desc="Process Corner", default=Corner.TYP)
-    v = h.Param(dtype=h.Prefixed, desc="Supply Voltage Value (V)", default=1800*m)
+    v = h.Param(dtype=h.Prefixed, desc="Supply Voltage Value (V)", default=1800 * m)
     t = h.Param(dtype=int, desc="Simulation Temperature (C)", default=25)
 
 
@@ -37,11 +37,11 @@ class TbParams:
 
 @h.generator
 def CmlPulseGenTb(params: TbParams) -> h.Module:
-    """ CML Pulse Generator Testbench """
+    """CML Pulse Generator Testbench"""
 
     tb = h.sim.tb("CmlPulseGenTb")
 
-    # Create and drive the supply 
+    # Create and drive the supply
     tb.VDD = h.Signal()
     tb.vvdd = Vdc(Vdc.Params(dc=params.pvt.v))(p=tb.VDD, n=tb.VSS)
 
@@ -51,7 +51,6 @@ def CmlPulseGenTb(params: TbParams) -> h.Module:
         period=4 * n, delay=125 * p, vc=1350 * m, vd=900 * m, trf=800 * p
     )
     tb.ckgen = DiffClkGen(ckp)(ck=ckg, VSS=tb.VSS)
-
 
     # CML buffer the input clock, bring it into our CML levels
     tb.bufbias = bufbias = h.Signal()
@@ -68,7 +67,8 @@ def CmlPulseGenTb(params: TbParams) -> h.Module:
 
     # Create the parameterized DUT
     tb.dut = CmlPulseGen(params.cml)(
-        inp=ckd, out=tb.out,
+        inp=ckd,
+        out=tb.out,
         ibias=ibias,
         VDD=tb.VDD,
         VSS=tb.VSS,
@@ -77,12 +77,9 @@ def CmlPulseGenTb(params: TbParams) -> h.Module:
 
 
 def test_cml_pulsegen():
-    """ CML Divider Test(s) """
+    """CML Divider Test(s)"""
 
-    params = TbParams(
-        pvt=Pvt(), 
-        cml=CmlParams(rl=4 * K, cl=25 * f, ib=250 * µ)
-    )
+    params = TbParams(pvt=Pvt(), cml=CmlParams(rl=4 * K, cl=25 * f, ib=250 * µ))
     sim = Sim(tb=CmlPulseGenTb(params), attrs=s130.install.include(params.pvt.p))
     sim.tran(tstop=12 * n)
     results = sim.run(sim_options)

@@ -22,7 +22,7 @@ from ..tests.sim_options import sim_options
 
 @h.generator
 def CmlDivTb(params: CmlParams) -> h.Module:
-    """ CML Divider Testbench """
+    """CML Divider Testbench"""
 
     tb = h.sim.tb("CmlDivTb")
     tb.ckg = ckg = Diff()
@@ -49,7 +49,7 @@ def CmlDivTb(params: CmlParams) -> h.Module:
     tb.dut = CmlDiv(params)(
         clk=ckd,
         q=q,
-        i=i, 
+        i=i,
         ibias=ibias,
         VDD=tb.VDD,
         VSS=tb.VSS,
@@ -58,7 +58,7 @@ def CmlDivTb(params: CmlParams) -> h.Module:
 
 
 def test_cml_div():
-    """ CML Divider Test(s) """
+    """CML Divider Test(s)"""
 
     params = CmlParams(rl=4 * K, cl=25 * f, ib=250 * µ)
     sim = Sim(tb=CmlDivTb(params), attrs=s130.install.include(Corner.TYP))

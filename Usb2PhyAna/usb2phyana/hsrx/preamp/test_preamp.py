@@ -8,7 +8,7 @@ import hdl21.sim as hs
 from hdl21.pdk import Corner
 from hdl21.prefix import m, µ, f, n, T, PICO
 from hdl21.primitives import Vdc, Idc, C
-import s130 
+import s130
 import sitepdks as _
 
 from ...tests.sim_options import sim_options
@@ -19,45 +19,48 @@ from .. import Diff
 from ...tests.diffclockgen import DiffClkGen, DiffClkParams
 
 
-@h.paramclass 
+@h.paramclass
 class BalunParams:
     vc = h.Param(dtype=h.Prefixed, desc="Common-Mode Voltage", default=0 * m)
 
 
-@h.generator 
+@h.generator
 def Balun(p: BalunParams) -> h.Module:
     @h.module
     class Balun:
         diff = Diff(port=True, role=Diff.Roles.SOURCE)
         VSS = h.Port()
         vc = Vdc(Vdc.Params(dc=p.vc, ac=0))(n=VSS)
-        vp = Vdc(Vdc.Params(dc=0, ac=500*m))(p=diff.p, n=vc.p)
-        vn = Vdc(Vdc.Params(dc=0, ac=-500*m))(p=diff.n, n=vc.p)
+        vp = Vdc(Vdc.Params(dc=0, ac=500 * m))(p=diff.p, n=vc.p)
+        vn = Vdc(Vdc.Params(dc=0, ac=-500 * m))(p=diff.n, n=vc.p)
+
     return Balun
 
 
 @h.paramclass
 class Pvt:
-    """ Process, Voltage, and Temperature Parameters """
+    """Process, Voltage, and Temperature Parameters"""
 
     p = h.Param(dtype=Corner, desc="Process Corner", default=Corner.TYP)
-    v = h.Param(dtype=h.Prefixed, desc="Supply Voltage Value (V)", default=3300*m)
+    v = h.Param(dtype=h.Prefixed, desc="Supply Voltage Value (V)", default=3300 * m)
     t = h.Param(dtype=int, desc="Simulation Temperature (C)", default=25)
 
 
 @h.paramclass
 class TbParams:
-    pvt = h.Param(dtype=Pvt, desc="Process, Voltage, and Temperature Parameters", default=Pvt())
-    ib = h.Param(dtype=h.Prefixed, desc="Bias Current Value (A)", default=1*m)
+    pvt = h.Param(
+        dtype=Pvt, desc="Process, Voltage, and Temperature Parameters", default=Pvt()
+    )
+    ib = h.Param(dtype=h.Prefixed, desc="Bias Current Value (A)", default=1 * m)
     vc = h.Param(dtype=h.Prefixed, desc="Common-Mode Voltage (V)", default=200 * m)
     cl = h.Param(dtype=h.Prefixed, desc="Load Cap (Single-Ended) (F)", default=50 * f)
 
 
 @h.generator
 def PreAmpTb(p: TbParams) -> h.Module:
-    """ Pre-Amp Testbench """
+    """Pre-Amp Testbench"""
 
-    # Create our testbench 
+    # Create our testbench
     tb = h.sim.tb("PreAmpTb")
     # Generate and drive VDD
     tb.VDD = VDD = h.Signal()
@@ -70,13 +73,9 @@ def PreAmpTb(p: TbParams) -> h.Module:
     ## For Ac: the "balnun"
     ## tb.balun = Balun(vc=p.vc)(diff=tb.inp, VSS=tb.VSS)
     ## For Tran: generate a differential clock pattern
-    tb.ckg = DiffClkGen(
-        period = 4*n,
-        delay = 0,
-        vd = 200*m,
-        vc = 200*m,
-        trf = 800*PICO
-    )(ck=tb.inp, VSS=tb.VSS)
+    tb.ckg = DiffClkGen(period=4 * n, delay=0, vd=200 * m, vc=200 * m, trf=800 * PICO)(
+        ck=tb.inp, VSS=tb.VSS
+    )
 
     # Output & Load Caps
     tb.out = Diff()
@@ -86,32 +85,38 @@ def PreAmpTb(p: TbParams) -> h.Module:
 
     # Bias Current
     tb.ibias = ibias = h.Signal()
-    tb.ii = Idc(Idc.Params(dc=p.ib))(p=ibias, n=tb.VSS) # *Sinks* a current equal to `p.ib`. 
-    
-    # Create the Pre-Amp DUT 
+    tb.ii = Idc(Idc.Params(dc=p.ib))(
+        p=ibias, n=tb.VSS
+    )  # *Sinks* a current equal to `p.ib`.
+
+    # Create the Pre-Amp DUT
     tb.dut = PreAmp(
-         inp=tb.inp, out=tb.out, ibias=ibias, VDD33=tb.VDD, VSS=tb.VSS,
+        inp=tb.inp,
+        out=tb.out,
+        ibias=ibias,
+        VDD33=tb.VDD,
+        VSS=tb.VSS,
     )
     return tb
 
 
 def test_preamp_sim():
-    """ Pre-Amp Test(s) """
+    """Pre-Amp Test(s)"""
 
-    # Create our parametric testbench 
-    params = TbParams(pvt=Pvt(), vc=200*m, cl=10 * f, ib=200 * µ)
+    # Create our parametric testbench
+    params = TbParams(pvt=Pvt(), vc=200 * m, cl=10 * f, ib=200 * µ)
 
-    # And simulation input for it 
+    # And simulation input for it
     @hs.sim
     class PreAmpSim:
         tb = PreAmpTb(params)
         op = hs.Op()
-        ac = hs.Ac(sweep=hs.LogSweep(start=1, stop=1*T, npts=100))
-        tr = hs.Tran(tstop=20*n)
+        ac = hs.Ac(sweep=hs.LogSweep(start=1, stop=1 * T, npts=100))
+        tr = hs.Tran(tstop=20 * n)
         # dc_gain = hs.Meas(analysis=ac, expr="find 'vdb(xtop.out_p, xtop.out_n)' at=1")
 
     PreAmpSim.add(*s130.install.include(Corner.TYP))
-    
+
     # Run some spice
     results = PreAmpSim.run(sim_options)
 
@@ -123,4 +128,3 @@ def test_preamp_sim():
     # results = sim.run(sim_options)
 
     print(results)
-

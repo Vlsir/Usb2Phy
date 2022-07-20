@@ -2,7 +2,7 @@
 # CML Phase Interpolator 
 """
 
-# Std-Lib Imports 
+# Std-Lib Imports
 from enum import Enum, auto
 
 # Hdl & PDK Imports
@@ -30,14 +30,15 @@ from .encoder import PiEncoder
 
 @h.paramclass
 class PiParams:
-    """ Phase Interpolator Parameters """
+    """Phase Interpolator Parameters"""
 
     nbits = h.Param(dtype=int, default=5, desc="Resolution, or width of select-input.")
 
-@h.bundle 
+
+@h.bundle
 class IqPair:
-    """ 
-    # I/Q Signal Pair 
+    """
+    # I/Q Signal Pair
     Pair of signals which represent in-phase and quadrature components of a complex signal.
     """
 
@@ -50,7 +51,7 @@ class IqPair:
 
 @h.generator
 def IdacTherm(p: CmlParams) -> h.Module:
-    """ Current Dac, Thermometer Encoded """
+    """Current Dac, Thermometer Encoded"""
 
     Unit = IdacUnit(p)
 
@@ -77,7 +78,7 @@ def IdacTherm(p: CmlParams) -> h.Module:
 
 @h.generator
 def IdacUnit(_: CmlParams) -> h.Module:
-    """ Current Dac Unit """
+    """Current Dac Unit"""
 
     @h.module
     class IdacUnit:
@@ -91,7 +92,7 @@ def IdacUnit(_: CmlParams) -> h.Module:
         bias = h.Input()
         nb = Nbias(g=bias, s=VSS, b=VSS)
 
-        ## Differential Current-Switch 
+        ## Differential Current-Switch
         swi = Nswitch(g=eni, d=out.i, s=nb.d, b=VSS)
         swq = Nswitch(g=enq, d=out.q, s=nb.d, b=VSS)
 
@@ -100,7 +101,7 @@ def IdacUnit(_: CmlParams) -> h.Module:
 
 @h.generator
 def PhaseInterp(p: PiParams) -> h.Module:
-    """ Phase Interpolator Generator """
+    """Phase Interpolator Generator"""
 
     params = CmlParams(rl=4 * K, cl=25 * f, ib=250 * µ)
 
@@ -108,8 +109,10 @@ def PhaseInterp(p: PiParams) -> h.Module:
     class PhaseInterp:
         # IO Interface
         VDD, VSS = h.Ports(2)
-        
-        ckq = QuadClock(role=QuadClock.Roles.SINK, port=True, desc="Quadrature clock input")
+
+        ckq = QuadClock(
+            role=QuadClock.Roles.SINK, port=True, desc="Quadrature clock input"
+        )
         out = Diff(port=True, role=Diff.Roles.SOURCE, desc="Output clock")
         sel = h.Input(width=p.nbits, desc="Selection input")
 
@@ -136,10 +139,12 @@ def PhaseInterp(p: PiParams) -> h.Module:
         nb = Nbias(g=ibias, d=ibias, s=VSS, b=VSS)
         daci, dacq = h.Signals(2)
         idac = IdacTherm(params)(
-            qtherm=qtherm, 
-            itherm=itherm, 
+            qtherm=qtherm,
+            itherm=itherm,
             out=h.AnonymousBundle(i=daci, q=dacq),
-            bias=ibias, VDD=VDD, VSS=VSS
+            bias=ibias,
+            VDD=VDD,
+            VSS=VSS,
         )
 
         ## The "MSB Mux": a set of four polarity-inverting switches
@@ -166,13 +171,23 @@ def PhaseInterp(p: PiParams) -> h.Module:
     g = [Pi.ckq.ck0, Pi.ckq.ck180, Pi.ckq.ck0, Pi.ckq.ck180]
     s = 2 * [Pi.ckpairsources[0]] + 2 * [Pi.ckpairsources[1]]
     for idx in range(4):
-        inst = Nswitch(d=d[idx], g=g[idx], s=s[idx], b=Pi.VSS,)
+        inst = Nswitch(
+            d=d[idx],
+            g=g[idx],
+            s=s[idx],
+            b=Pi.VSS,
+        )
         Pi.add(name=f"ni{idx}", val=inst)
 
     g = [Pi.ckq.ck90, Pi.ckq.ck270, Pi.ckq.ck90, Pi.ckq.ck270]
     s = 2 * [Pi.ckpairsources[2]] + 2 * [Pi.ckpairsources[3]]
     for idx in range(4):
-        inst = Nswitch(d=d[idx], g=g[idx], s=s[idx], b=Pi.VSS,)
+        inst = Nswitch(
+            d=d[idx],
+            g=g[idx],
+            s=s[idx],
+            b=Pi.VSS,
+        )
         Pi.add(name=f"nq{idx}", val=inst)
 
     return PhaseInterp

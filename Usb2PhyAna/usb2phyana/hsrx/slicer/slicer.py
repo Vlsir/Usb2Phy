@@ -8,7 +8,7 @@ FIXME: sizing of all transistors, all of which are thus far default values.
 import hdl21 as h
 
 import s130
-from s130 import MosParams 
+from s130 import MosParams
 
 # Local Imports
 from ...diff import Diff
@@ -20,10 +20,10 @@ Nmos = s130.modules.nmos_lvt(MosParams())
 
 @h.module
 class Nor2:
-    """ # Nor2 for SR Latch 
-    Inputs `i` and `fb` are designated for input and feedback respectively. 
-    The feedback input is the faster of the two. """
-    
+    """# Nor2 for SR Latch
+    Inputs `i` and `fb` are designated for input and feedback respectively.
+    The feedback input is the faster of the two."""
+
     # IO
     VDD18, VSS = h.Ports(2)
     i, fb = h.Inputs(2)
@@ -38,8 +38,8 @@ class Nor2:
 
 @h.module
 class SrLatch:
-    """ # Nor2-Based SR Latch """
-    
+    """# Nor2-Based SR Latch"""
+
     # IO
     VDD18, VSS = h.Ports(2)
     inp = Diff(port=True, role=Diff.Roles.SINK)
@@ -53,7 +53,7 @@ class SrLatch:
 
 @h.module
 class StrongArm:
-    """ # StrongArm Comparator """
+    """# StrongArm Comparator"""
 
     # IO
     VDD18, VSS = h.Ports(2)
@@ -86,7 +86,7 @@ class StrongArm:
 
 @h.module
 class Slicer:
-    """ # StrongArm Based Slicer """
+    """# StrongArm Based Slicer"""
 
     # IO
     VDD18, VSS = h.Ports(2)

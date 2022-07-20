@@ -2,4 +2,4 @@
 # High-Speed TX
 """
 
-from .hstx import * 
+from .hstx import *

@@ -1,4 +1,3 @@
-
 """
 # Widely re-used `SimOptions`
 """

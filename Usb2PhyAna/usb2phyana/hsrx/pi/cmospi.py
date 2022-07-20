@@ -8,7 +8,7 @@ from hdl21.prefix import f
 Cap = h.primitives.Cap
 
 # Local Imports
-from ...diff import Diff 
+from ...diff import Diff
 from ...quadclock import QuadClock
 from ...encoders import OneHotEncoder, ThermoEncoder3to8
 from ...triinv import TriInv
@@ -17,15 +17,15 @@ from ...logiccells import Inv
 
 @h.paramclass
 class PiParams:
-    """ Phase Interpolator Parameters """
+    """Phase Interpolator Parameters"""
 
     nbits = h.Param(dtype=int, default=5, desc="Resolution, or width of select-input.")
 
 
 @h.generator
 def FineInterp(_: PiParams) -> h.Module:
-    """ # MSB Mux 
-    Generates pair of outputs "early clock" and "late clock" `eck` and `lck` dictated by `sel`. """
+    """# MSB Mux
+    Generates pair of outputs "early clock" and "late clock" `eck` and `lck` dictated by `sel`."""
 
     InterpTriInv = TriInv(width=1)
 
@@ -59,8 +59,8 @@ def FineInterp(_: PiParams) -> h.Module:
 
 @h.generator
 def MsbMux(_: PiParams) -> h.Module:
-    """ # MSB Mux 
-    Generates pair of outputs "early clock" and "late clock" `eck` and `lck` dictated by `sel`. """
+    """# MSB Mux
+    Generates pair of outputs "early clock" and "late clock" `eck` and `lck` dictated by `sel`."""
 
     @h.module
     class MsbMux:
@@ -82,12 +82,12 @@ def MsbMux(_: PiParams) -> h.Module:
     late = [MsbMux.ckq.ck90, MsbMux.ckq.ck180, MsbMux.ckq.ck270, MsbMux.ckq.ck0]
 
     def triinv():
-        """ Closure to generate a "partial instance" of `TriInv`,
-        with the shared connections among all stages. """
+        """Closure to generate a "partial instance" of `TriInv`,
+        with the shared connections among all stages."""
         return TriInv(width=1)(VDD=MsbMux.VDD, VSS=MsbMux.VSS)
 
     def add_pair(index: int):
-        """ Closure to add a pair of `TriInv`, one each to the early and late clock outputs. """
+        """Closure to add a pair of `TriInv`, one each to the early and late clock outputs."""
         i = triinv()(i=early[index], z=MsbMux.eckb, en=MsbMux.onehot[index])
         MsbMux.add(val=i, name=f"einv{index}")
         i = triinv()(i=late[index], z=MsbMux.lckb, en=MsbMux.onehot[index])
@@ -122,14 +122,16 @@ def MsbMux(_: PiParams) -> h.Module:
 
 @h.generator
 def PhaseInterp(p: PiParams) -> h.Module:
-    """ Phase Interpolator Generator """
+    """Phase Interpolator Generator"""
 
     @h.module
     class PhaseInterp:
         # IO Interface
         VDD, VSS = h.Ports(2)
 
-        ckq = QuadClock(role=QuadClock.Roles.SINK, port=True, desc="Quadrature clock input")
+        ckq = QuadClock(
+            role=QuadClock.Roles.SINK, port=True, desc="Quadrature clock input"
+        )
         out = Diff(port=True, role=Diff.Roles.SOURCE, desc="Output clock")
         sel = h.Input(width=p.nbits, desc="Selection input")
 
@@ -138,7 +140,9 @@ def PhaseInterp(p: PiParams) -> h.Module:
         ## MSB Selection Mux
         msb_mux = MsbMux(p)(ckq=ckq, sel=sel[-2:], eck=eck, lck=lck, VDD=VDD, VSS=VSS)
         ## LSB / Fine Interpolator
-        ### FIXME: driving differential/ complementary output 
-        fine = FineInterp(p)(eck=eck, lck=lck, sel=sel[:-2], out=out.p, VDD=VDD, VSS=VSS)
+        ### FIXME: driving differential/ complementary output
+        fine = FineInterp(p)(
+            eck=eck, lck=lck, sel=sel[:-2], out=out.p, VDD=VDD, VSS=VSS
+        )
 
     return PhaseInterp

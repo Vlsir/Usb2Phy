@@ -6,7 +6,7 @@ For simulation, from ideal pulse voltage sources
 
 # Hdl & PDK Imports
 import hdl21 as h
-import hdl21.sim as hs 
+import hdl21.sim as hs
 from hdl21.primitives import Vpulse
 
 # Local Imports
@@ -15,7 +15,7 @@ from ..diff import Diff
 
 @h.paramclass
 class DiffClkParams:
-    """ Differential Clock Generator Parameters """
+    """Differential Clock Generator Parameters"""
 
     period = h.Param(dtype=hs.ParamVal, desc="Period")
     delay = h.Param(dtype=hs.ParamVal, desc="Delay")
@@ -26,16 +26,16 @@ class DiffClkParams:
 
 @h.generator
 def DiffClkGen(p: DiffClkParams) -> h.Module:
-    """ # Differential Clock Generator 
-    For simulation, from ideal pulse voltage sources """
+    """# Differential Clock Generator
+    For simulation, from ideal pulse voltage sources"""
 
     ckg = h.Module()
     ckg.VSS = VSS = h.Port()
     ckg.ck = ck = Diff(role=Diff.Roles.SINK, port=True)
 
     def vparams(polarity: bool) -> Vpulse.Params:
-        """ Closure to create the pulse-source parameters for each differential half. 
-        Argument `polarity` is True for positive half, False for negative half. """
+        """Closure to create the pulse-source parameters for each differential half.
+        Argument `polarity` is True for positive half, False for negative half."""
         # Initially create the voltage levels for the positive half
         v1 = p.vc + p.vd / 2
         v2 = p.vc - p.vd / 2
@@ -56,4 +56,3 @@ def DiffClkGen(p: DiffClkParams) -> h.Module:
     ckg.vn = Vpulse(vparams(False))(p=ck.n, n=VSS)
 
     return ckg
-

@@ -18,7 +18,7 @@ from ...tests.quadclockgen import QuadClockGen, QclkParams
 
 @h.generator
 def PhaseInterpTb(p: TbParams) -> h.Module:
-    """ Phase Interpolator Testbench """
+    """Phase Interpolator Testbench"""
 
     tb = h.sim.tb("PhaseInterpTb")
 
@@ -35,13 +35,13 @@ def PhaseInterpTb(p: TbParams) -> h.Module:
     tb.code = h.Signal(width=5)
 
     def vbit(i: int):
-        """ Create a `Vdc` call equal to either `p.VDD` or zero. """
+        """Create a `Vdc` call equal to either `p.VDD` or zero."""
         val = p.VDD if i else 0 * m
         return Vdc(Vdc.Params(dc=val))
 
     def vcode(code: int) -> None:
-        """ Closure to drive `tb.code` to the (binary) value of `code`. 
-        Essentially an integer to binary, and then binary to `Vdc.Params` converter. """
+        """Closure to drive `tb.code` to the (binary) value of `code`.
+        Essentially an integer to binary, and then binary to `Vdc.Params` converter."""
 
         if code < 0:
             raise ValueError
@@ -58,10 +58,10 @@ def PhaseInterpTb(p: TbParams) -> h.Module:
     # Call all that to drive the code bus
     vcode(p.code)
 
-    # Create the differential output clock 
+    # Create the differential output clock
     tb.dck = Diff()
     # And since this version really only drives single ended, drive the negative half to VDD/2
-    tb.vdckn = Vdc(Vdc.Params(dc=p.VDD/2))(p=tb.dck.n, n=tb.VSS)
+    tb.vdckn = Vdc(Vdc.Params(dc=p.VDD / 2))(p=tb.dck.n, n=tb.VSS)
 
     # Finally, create the DUT
     tb.dut = PhaseInterp(nbits=5)(
@@ -71,13 +71,12 @@ def PhaseInterpTb(p: TbParams) -> h.Module:
 
 
 def test_phase_interp():
-    """ Phase Interpolator Test(s) """
+    """Phase Interpolator Test(s)"""
 
-    from .tb import sim 
+    from .tb import sim
     from .compare import save_plot
 
     params = [TbParams(code=code) for code in range(32)]
     delays = [sim(tb=PhaseInterpTb(p), params=p) for p in params]
     print(delays)
     save_plot(delays, "CMOS PI", "cmospi.png")
-

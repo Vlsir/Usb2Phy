@@ -29,7 +29,7 @@ from ...triinv import TriInv
 
 @h.generator
 def PiEncoder(p: Width) -> h.Module:
-    """ Phase Interpolator Encoder """
+    """Phase Interpolator Encoder"""
 
     if p.width != 5:
         raise RuntimeError(f"yeah we know it's a parameter, but not really yet")

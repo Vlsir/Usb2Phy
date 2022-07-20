@@ -16,7 +16,7 @@ from .width import Width
 
 @h.generator
 def TriInv(p: Width) -> h.Module:
-    """ Tri-State Inverter """
+    """Tri-State Inverter"""
 
     m = h.Module()
     m.VDD, m.VSS = h.Ports(2)

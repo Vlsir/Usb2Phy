@@ -34,8 +34,20 @@ setup(
         f"hdl21=={_VLSIR_VERSION}",
         "pydantic==1.9.1",
     ],
-    tests_require=["pytest==7.1", "numpy", "matplotlib"], # FIXME: what `pip` incantation actually gets these installed? 
+    tests_require=[
+        "pytest==7.1",
+        "numpy",
+        "matplotlib",
+    ],  # FIXME: what `pip` incantation actually gets these installed?
     extras_require={
-        "dev": ["pytest==7.1", "coverage", "pytest-cov", "black==22.6", "twine", "numpy", "matplotlib"]
+        "dev": [
+            "pytest==7.1",
+            "coverage",
+            "pytest-cov",
+            "black==22.6",
+            "twine",
+            "numpy",
+            "matplotlib",
+        ]
     },
 )

@@ -10,9 +10,9 @@ from hdl21.primitives import Vdc, Idc
 
 # DUT Imports
 from .cmlpi import PhaseInterp
-from .tb import TbParams 
+from .tb import TbParams
 from .. import Diff
-from .. import QuadClock 
+from .. import QuadClock
 from ...cmlbuf import CmlBuf
 from ...cmlparams import CmlParams
 from ...tests.quadclockgen import QuadClockGen, QclkParams
@@ -20,11 +20,11 @@ from ...tests.quadclockgen import QuadClockGen, QclkParams
 
 @h.generator
 def PhaseInterpTb(p: TbParams) -> h.Module:
-    """ Phase Interpolator Testbench """
+    """Phase Interpolator Testbench"""
 
     params = CmlParams(rl=4 * K, cl=25 * f, ib=250 * µ)
 
-    # Create our testbench 
+    # Create our testbench
     tb = h.sim.tb("PhaseInterpTb")
     # Generate and drive VDD
     tb.VDD = h.Signal()
@@ -63,13 +63,13 @@ def PhaseInterpTb(p: TbParams) -> h.Module:
     tb.code = h.Signal(width=5)
 
     def vbit(i: int):
-        """ Create a `Vdc` call equal to either `p.VDD` or zero. """
+        """Create a `Vdc` call equal to either `p.VDD` or zero."""
         val = p.VDD if i else 0 * m
         return Vdc(Vdc.Params(dc=val))
 
     def vcode(code: int) -> None:
-        """ Closure to drive `tb.code` to the (binary) value of `code`. 
-        Essentially an integer to binary, and then binary to `Vdc.Params` converter. """
+        """Closure to drive `tb.code` to the (binary) value of `code`.
+        Essentially an integer to binary, and then binary to `Vdc.Params` converter."""
 
         if code < 0:
             raise ValueError
@@ -88,7 +88,10 @@ def PhaseInterpTb(p: TbParams) -> h.Module:
 
     tb.dck = Diff()
     ckqbuf = h.AnonymousBundle(
-        ck0=tb.ckibuf.p, ck90=tb.ckqbuf.p, ck180=tb.ckibuf.n, ck270=tb.ckqbuf.n,
+        ck0=tb.ckibuf.p,
+        ck90=tb.ckqbuf.p,
+        ck180=tb.ckibuf.n,
+        ck270=tb.ckqbuf.n,
     )
     tb.dut = PhaseInterp(nbits=5)(
         VDD=tb.VDD, VSS=tb.VSS, ckq=ckqbuf, sel=tb.code, out=tb.dck
@@ -97,9 +100,9 @@ def PhaseInterpTb(p: TbParams) -> h.Module:
 
 
 def test_phase_interp():
-    """ Phase Interpolator Test(s) """
+    """Phase Interpolator Test(s)"""
 
-    from .tb import sim 
+    from .tb import sim
     from .compare import save_plot
 
     params = [TbParams(code=code) for code in range(32)]

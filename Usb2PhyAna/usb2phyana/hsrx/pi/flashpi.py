@@ -42,9 +42,9 @@ class PhaseWeighterParams:
 
 @h.generator
 def PhaseWeighter(p: PhaseWeighterParams) -> h.Module:
-    """ # Phase-Weighter
-    Drives a single output with two out-of-phase inputs `a` and `b`, 
-    with weights dictates by params `wta` and `wtb`. """
+    """# Phase-Weighter
+    Drives a single output with two out-of-phase inputs `a` and `b`,
+    with weights dictates by params `wta` and `wtb`."""
 
     @h.module
     class PhaseWeighter:
@@ -76,17 +76,17 @@ def PhaseWeighter(p: PhaseWeighterParams) -> h.Module:
 
 @h.paramclass
 class PiParams:
-    """ Phase Interpolator Parameters """
+    """Phase Interpolator Parameters"""
 
     nbits = h.Param(dtype=int, default=5, desc="Resolution, or width of select-input.")
 
 
 @h.generator
 def PhaseGenerator(p: PiParams) -> h.Module:
-    """ # Phase Generator (Generator) (Get it?) 
-    
-    Takes a primary input `QuadClock` and interpolates to produce 
-    an array of equally-spaced output phases. """
+    """# Phase Generator (Generator) (Get it?)
+
+    Takes a primary input `QuadClock` and interpolates to produce
+    an array of equally-spaced output phases."""
 
     PhaseGen = h.Module()
     VDD, VSS = PhaseGen.VDD, PhaseGen.VSS = h.Ports(2)
@@ -94,7 +94,7 @@ def PhaseGenerator(p: PiParams) -> h.Module:
         role=QuadClock.Roles.SINK, port=True, desc="Quadrature input"
     )
     phases = PhaseGen.phases = h.Output(
-        width=2 ** p.nbits, desc="Array of equally-spaced phases"
+        width=2**p.nbits, desc="Array of equally-spaced phases"
     )
 
     if p.nbits != 5:
@@ -144,13 +144,13 @@ def PhaseGenerator(p: PiParams) -> h.Module:
 
 @h.generator
 def PhaseSelector(p: PiParams) -> h.Module:
-    """ # Phase Selector Mux """
+    """# Phase Selector Mux"""
 
     @h.module
     class PhaseSelector:
         # IO Interface
         VDD, VSS = h.Ports(2)
-        phases = h.Input(width=2 ** p.nbits, desc="Array of equally-spaced phases")
+        phases = h.Input(width=2**p.nbits, desc="Array of equally-spaced phases")
         sel = h.Input(width=p.nbits, desc="Selection input")
         out = h.Output(width=1, desc="Clock output")
 
@@ -163,23 +163,25 @@ def PhaseSelector(p: PiParams) -> h.Module:
 
 @h.generator
 def PhaseInterp(p: PiParams) -> h.Module:
-    """ Phase Interpolator Generator """
+    """Phase Interpolator Generator"""
 
     @h.module
     class PhaseInterp:
         # IO Interface
         VDD, VSS = h.Ports(2)
 
-        ckq = QuadClock(role=QuadClock.Roles.SINK, port=True, desc="Quadrature clock input")
+        ckq = QuadClock(
+            role=QuadClock.Roles.SINK, port=True, desc="Quadrature clock input"
+        )
         out = Diff(port=True, role=Diff.Roles.SOURCE, desc="Output clock")
         sel = h.Input(width=p.nbits, desc="Selection input")
 
         # Internal Signals
-        phases = h.Signal(width=2 ** p.nbits, desc="Array of equally-spaced phases")
+        phases = h.Signal(width=2**p.nbits, desc="Array of equally-spaced phases")
 
         # Instantiate the phase-generator and phase-selector
         phgen = PhaseGenerator(p)(ckq=ckq, phases=phases, VDD=VDD, VSS=VSS)
-        ### FIXME: driving differential/ complementary output 
+        ### FIXME: driving differential/ complementary output
         phsel = PhaseSelector(p)(phases=phases, sel=sel, out=out.p, VDD=VDD, VSS=VSS)
 
     return PhaseInterp

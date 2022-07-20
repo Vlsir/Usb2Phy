@@ -30,7 +30,7 @@ class TbParams:
 
 @h.generator
 def ThermoEncoderTb(p: TbParams) -> h.Module:
-    """ Phase Interpolator Testbench """
+    """Phase Interpolator Testbench"""
 
     tb = h.sim.tb("ThermoEncoderTb")
 
@@ -42,15 +42,15 @@ def ThermoEncoderTb(p: TbParams) -> h.Module:
     tb.code = h.Signal(width=p.width)
 
     def vbit(i: int):
-        """ Create a `Vdc` call equal to either `p.VDD` or zero. """
+        """Create a `Vdc` call equal to either `p.VDD` or zero."""
         val = p.VDD if i else 0 * m
         return Vdc(Vdc.Params(dc=val))
 
     def vcode(code: int) -> None:
-        """ Closure to drive `tb.code` to the (binary) value of `code`. 
-        Essentially an integer to binary, and then binary to `Vdc.Params` converter. """
+        """Closure to drive `tb.code` to the (binary) value of `code`.
+        Essentially an integer to binary, and then binary to `Vdc.Params` converter."""
 
-        if code < 0 or code >= 2 ** p.width:
+        if code < 0 or code >= 2**p.width:
             raise ValueError
 
         # Convert to a binary-valued string
@@ -73,7 +73,7 @@ def ThermoEncoderTb(p: TbParams) -> h.Module:
 
 
 def sim_thermo_encoder(p: TbParams) -> None:
-    """ Thermometer Encoder Sim """
+    """Thermometer Encoder Sim"""
 
     print(f"Simulating ThermoEncoder for code {p.code}")
 
@@ -89,15 +89,15 @@ def sim_thermo_encoder(p: TbParams) -> None:
 
     # Check we got the right thermometer-encoded output
     data = results.an[0].data
-    therm = [data[f"xtop.therm_{idx}"] for idx in range(2 ** p.width)]
+    therm = [data[f"xtop.therm_{idx}"] for idx in range(2**p.width)]
     for idx in range(p.code + 1):
         assert therm[idx] > 0.99 * float(p.VDD)
-    for idx in range(p.code + 1, (2 ** p.width) - 1):
+    for idx in range(p.code + 1, (2**p.width) - 1):
         assert therm[idx] < 0.01 * float(p.VDD)
 
 
 def test_thermo_encoder():
-    """ Thermo Encoder Test(s) """
+    """Thermo Encoder Test(s)"""
     for code in range(8):
         p = TbParams(VDD=1800 * m, code=code, width=3)
         sim_thermo_encoder(p)

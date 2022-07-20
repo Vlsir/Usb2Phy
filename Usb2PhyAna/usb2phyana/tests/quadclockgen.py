@@ -14,7 +14,7 @@ from .. import QuadClock
 
 @h.paramclass
 class QclkParams:
-    """ Quadrature Clock Generator Parameters """
+    """Quadrature Clock Generator Parameters"""
 
     period = h.Param(dtype=h.Prefixed, desc="Period")
     v1 = h.Param(dtype=h.Prefixed, desc="Low Voltage Level")
@@ -24,12 +24,12 @@ class QclkParams:
 
 @h.generator
 def QuadClockGen(p: QclkParams) -> h.Module:
-    """ # Quadrature Clock Generator 
-    For simulation, from ideal pulse voltage sources """
+    """# Quadrature Clock Generator
+    For simulation, from ideal pulse voltage sources"""
 
     def phpars(idx: int) -> Vpulse.Params:
-        """ Closure to create the delay-value for quadrature index `idx`, valued 0-3. 
-        Transitions start at 1/8 of a period, so that clocks are stable during time zero. """
+        """Closure to create the delay-value for quadrature index `idx`, valued 0-3.
+        Transitions start at 1/8 of a period, so that clocks are stable during time zero."""
 
         # Delays per phase, in eights of a period.
         # Note the negative values set `val2` as active during simulation time zero.

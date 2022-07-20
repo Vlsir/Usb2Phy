@@ -6,15 +6,15 @@
 import hdl21 as h
 
 # Local Imports
-from ..logiccells import Latch, Flop 
+from ..logiccells import Latch, Flop
 from ..encoders import OneHotEncoder
 from ..counter import Counter
 
 
 @h.generator
 def RxDeSerializer(_: h.HasNoParams) -> h.Module:
-    """ RX De-Serializer 
-    Includes parallel-clock generation divider """
+    """RX De-Serializer
+    Includes parallel-clock generation divider"""
 
     m = h.Module()
     m.pdata = h.Output(width=16, desc="Parallel Output Data")
@@ -38,4 +38,3 @@ def RxDeSerializer(_: h.HasNoParams) -> h.Module:
     m.output_flops = 8 * Flop()(d=m.load_latches.q, q=m.pdata, clk=m.pclk)
 
     return m
-

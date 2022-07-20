@@ -4,11 +4,12 @@
 
 # Hdl & PDK Imports
 import hdl21 as h
-from hdl21.prefix import f 
-from hdl21.primitives import C 
+from hdl21.prefix import f
+from hdl21.primitives import C
+
 
 import s130
-from s130 import MosParams 
+from s130 import MosParams
 
 # Local Imports
 from ...width import Width
@@ -29,7 +30,7 @@ class IloParams:
 
 @h.generator
 def IloInv(p: Width) -> h.Module:
-    """ # Injection Locked Oscillator Inverter """
+    """# Injection Locked Oscillator Inverter"""
 
     @h.module
     class IloInv:
@@ -40,14 +41,15 @@ def IloInv(p: Width) -> h.Module:
         # Internal Implementation
         nmos = Nmos(MosParams(m=p.width))(g=i, d=o, s=VSS, b=VSS)
         pmos = PmosHvt(MosParams(m=p.width))(g=i, d=o, s=VDD, b=VDD)
-    
+
     return IloInv
+
 
 @h.generator
 def IloStage(params: IloParams) -> h.Module:
-    """ # Injection Locked Oscillator Stage 
-    Note the input/ output polarities are such that the differential 
-    transfer is *non* inverting. """
+    """# Injection Locked Oscillator Stage
+    Note the input/ output polarities are such that the differential
+    transfer is *non* inverting."""
 
     @h.module
     class IloStage:
@@ -57,13 +59,13 @@ def IloStage(params: IloParams) -> h.Module:
         out = Diff(port=True, role=Diff.Roles.SOURCE)
 
         # Internal Implementation
-        ## Forward Inverters 
+        ## Forward Inverters
         fwdp = IloInv(width=16)(i=inp.p, o=out.n, VDD=VDD, VSS=VSS)
         fwdn = IloInv(width=16)(i=inp.n, o=out.p, VDD=VDD, VSS=VSS)
         ## Cross-Coupled Output Inverters
         crossp = IloInv(width=4)(i=out.p, o=out.n, VDD=VDD, VSS=VSS)
         crossn = IloInv(width=4)(i=out.n, o=out.p, VDD=VDD, VSS=VSS)
-        ## Load Caps 
+        ## Load Caps
         clp = C(C.Params(c=params.cl))(p=out.p, n=VSS)
         cln = C(C.Params(c=params.cl))(p=out.n, n=VSS)
 
@@ -72,14 +74,14 @@ def IloStage(params: IloParams) -> h.Module:
 
 @h.generator
 def Ilo(params: IloParams) -> h.Module:
-    """ # Injection Locked Oscillator """
+    """# Injection Locked Oscillator"""
 
     @h.module
     class Ilo:
         # IO
         VDD18, VSS = h.Ports(2)
         inj = h.Input()
-        
+
         # Internal Implementation
         stg0 = Diff()
         stg1 = Diff()

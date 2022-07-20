@@ -27,13 +27,13 @@ from ...tests.sim_options import sim_options
 @h.paramclass
 class TbParams:
     corner = h.Param(dtype=Corner, desc="Process Corner", default=Corner.TYP)
-    VDD = h.Param(dtype=h.Prefixed, desc="Supply Voltage Value", default=1800*m)
+    VDD = h.Param(dtype=h.Prefixed, desc="Supply Voltage Value", default=1800 * m)
     temper = h.Param(dtype=int, desc="Simulation Temperature (C)", default=25)
     code = h.Param(dtype=int, desc="PI Code", default=11)
 
 
 def sim_input(tb: h.Instantiable, params: TbParams) -> Sim:
-    """ Phase Interpolator Delay Sim """
+    """Phase Interpolator Delay Sim"""
 
     print(f"Simulating PhaseInterp for code {params.code}")
 
@@ -59,16 +59,19 @@ def sim_input(tb: h.Instantiable, params: TbParams) -> Sim:
     )
 
     # FIXME! relies on this netlist of logic cells
-    sim.include("/tools/B/dan_fritchman/dev/VlsirWorkspace/Usb2Phy/Usb2PhyAna/resources/scs130lp.sp") 
-    
+    sim.include(
+        "/tools/B/dan_fritchman/dev/VlsirWorkspace/Usb2Phy/Usb2PhyAna/resources/scs130lp.sp"
+    )
+
     # FIXME: handling of multi-directory sims
     # opts = copy(sim_options)
     # opts.rundir = Path(f"./scratch/code{params.code}")
-    
+
     return sim
 
+
 def tdelay(results: SimResult) -> float:
-    """ Extract the `tdelay` measurement from `results`. """
+    """Extract the `tdelay` measurement from `results`."""
     # results = sim.run(opts)
     # results = sim.run(sim_options)
 
@@ -80,17 +83,17 @@ def tdelay(results: SimResult) -> float:
 
 
 def unwrap(delays: Sequence[float]) -> np.ndarray:
-    """ A small bit of "data munging", to remove periodic wraps modulo the reference period. """
-    delays = np.array(delays) % 2e-9 # FIXME: testbench period here
+    """A small bit of "data munging", to remove periodic wraps modulo the reference period."""
+    delays = np.array(delays) % 2e-9  # FIXME: testbench period here
     amin = np.argmin(delays)
     delays = np.concatenate((delays[amin:], delays[:amin]))
     return delays
 
 
-def save_plot(delays: Sequence[float], label:str, fname: str = "delays.png"):
-    """ Save a plot of the delays. 
-    Includes a small bit of "data munging", to remove periodic wraps modulo the reference period. """
-    
+def save_plot(delays: Sequence[float], label: str, fname: str = "delays.png"):
+    """Save a plot of the delays.
+    Includes a small bit of "data munging", to remove periodic wraps modulo the reference period."""
+
     delays = unwrap(delays)
     print(delays)
 

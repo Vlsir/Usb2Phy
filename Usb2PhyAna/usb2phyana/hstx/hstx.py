@@ -11,7 +11,7 @@ from ..diff import Diff
 
 @h.generator
 def TxDriver(_: h.HasNoParams) -> h.Module:
-    """ Transmit Driver """
+    """Transmit Driver"""
 
     m = h.Module()
     m.VDD, m.VSS = h.Ports(2)
@@ -28,7 +28,7 @@ def TxDriver(_: h.HasNoParams) -> h.Module:
 
 @h.bundle
 class TxData:
-    """ Transmit Data Bundle """
+    """Transmit Data Bundle"""
 
     pdata = h.Input(width=10, desc="Parallel Data Input")
     pclk = h.Output(desc="Output Parallel-Domain Clock")
@@ -36,14 +36,14 @@ class TxData:
 
 @h.bundle
 class TxConfig:
-    """ Transmit Config Bundle """
+    """Transmit Config Bundle"""
 
     ...  # FIXME: contents!
 
 
 @h.bundle
 class TxIo:
-    """ Transmit Lane IO """
+    """Transmit Lane IO"""
 
     pads = Diff(desc="Differential Transmit Pads", role=Diff.Roles.SOURCE)
     data = TxData(desc="Data IO from Core")
@@ -52,7 +52,7 @@ class TxIo:
 
 @h.module
 class HsTx:
-    """ 
+    """
     # High-Speed TX
     """
 
@@ -64,7 +64,7 @@ class HsTx:
     ## Core Interface
     sdata = h.Input(width=1, desc="Serial TX Data")
     ## PLL Interface
-    sclk = Diff(desc="Serial Clock", port=True, role=Diff.Roles.SINK) 
+    sclk = Diff(desc="Serial Clock", port=True, role=Diff.Roles.SINK)
 
     # Internal Implementation
     # ## Output Driver

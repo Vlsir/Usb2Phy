@@ -20,7 +20,7 @@ from .rotator import OneHotRotator
 
 
 def rotator_tb() -> h.Module:
-    """ Create the testbench for `OneHotRotator` """
+    """Create the testbench for `OneHotRotator`"""
 
     # "Parameter" Width
     width = 16
@@ -61,7 +61,7 @@ def rotator_tb() -> h.Module:
 
 
 def test_onehot_rotator():
-    """ Simulate the `OneHotRotator` """
+    """Simulate the `OneHotRotator`"""
     from hdl21.prefix import n
 
     sim = h.sim.Sim(tb=rotator_tb(), attrs=s130.install.include(Corner.TYP))
@@ -70,4 +70,3 @@ def test_onehot_rotator():
     results = sim.run(sim_options)
 
     print(results)
-

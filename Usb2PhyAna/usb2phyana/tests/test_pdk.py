@@ -1,9 +1,8 @@
-
-from dataclasses import dataclass 
+from dataclasses import dataclass
 
 # PyPi Imports
 import numpy as np
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
 
 # HDL & PDK Imports
 import sitepdks as _
@@ -29,7 +28,7 @@ pmos_v5 = s130.modules.pmos_v5
 
 
 def test_pdk():
-    """ Non-PHY test that we can execute simulations with the installed PDK """
+    """Non-PHY test that we can execute simulations with the installed PDK"""
 
     @h.module
     class Tb:
@@ -50,16 +49,17 @@ def test_pdk():
     print(res)
 
 
-@dataclass 
+@dataclass
 class MosDut:
-    """ Dut info for the IV Curve Test """
-    dut: h.Instantiable 
+    """Dut info for the IV Curve Test"""
+
+    dut: h.Instantiable
     mostype: MosType
 
 
 def test_iv():
-    """ I-V Curve Test """
-    
+    """I-V Curve Test"""
+
     duts = [
         MosDut(nmos(MosParams()), MosType.NMOS),
         MosDut(nmos_lvt(MosParams()), MosType.NMOS),
@@ -67,15 +67,15 @@ def test_iv():
         MosDut(pmos_hvt(MosParams()), MosType.PMOS),
     ]
 
-    # Dut = pmos_v5(IoMosParams()) # Default params 
-    # Dut = pmos(MosParams()) # Default params 
+    # Dut = pmos_v5(IoMosParams()) # Default params
+    # Dut = pmos(MosParams()) # Default params
     # NMOS = False  # FIXME: get this value, somewhere
 
     for dut in duts:
         res = iv(dut)
         print(res)
 
-    # And munge some results 
+    # And munge some results
     res = res.an[0]  # Get the DC sweep
     print(res.measurements)
     id = np.abs(res.data["xtop.vd:p"])
@@ -90,7 +90,7 @@ def test_iv():
 
 
 def iv(Dut: MosDut) -> hs.SimResult:
-    """ Create and return an IV Curve Sim """ 
+    """Create and return an IV Curve Sim"""
 
     @h.module
     class Tb:
@@ -103,9 +103,11 @@ def iv(Dut: MosDut) -> hs.SimResult:
     sim = Sim(tb=Tb, attrs=s130.install.include(Corner.TYP))
     vgs = sim.param(name="vgs", val=1800 * m)
     vds = sim.param(name="vds", val=1800 * m)
-    polarity = sim.param(name="polarity", val=1 if Dut.mostype == MosType.NMOS else -1) 
-    dc = sim.dc(var=vgs, sweep=LinearSweep(start=0, stop=2500 * m, step=10 * m), name="dc")
-    ac = sim.ac(sweep=LogSweep(start=1, stop=1*e(12), npts=100))
+    polarity = sim.param(name="polarity", val=1 if Dut.mostype == MosType.NMOS else -1)
+    dc = sim.dc(
+        var=vgs, sweep=LinearSweep(start=0, stop=2500 * m, step=10 * m), name="dc"
+    )
+    ac = sim.ac(sweep=LogSweep(start=1, stop=1 * e(12), npts=100))
     # sim.meas(ac, "igate_at_1M", "find 'mag(i(xtop.vg))' at=1e6")
     # sim.meas(ac, "cin", "param='igate_at_1M / 2 / 3.14159 / 1e6'")
 

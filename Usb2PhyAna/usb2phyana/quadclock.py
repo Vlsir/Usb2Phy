@@ -8,8 +8,8 @@ import hdl21 as h
 
 @h.bundle
 class QuadClock:
-    """ # Quadrature Clock Bundle 
-    Includes four 90-degree-separated phases. """
+    """# Quadrature Clock Bundle
+    Includes four 90-degree-separated phases."""
 
     class Roles(Enum):
         # Clock roles: source or sink

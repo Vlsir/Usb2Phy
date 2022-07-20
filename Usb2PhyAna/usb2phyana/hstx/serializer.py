@@ -15,8 +15,8 @@ from ..triinv import TriInv
 
 @h.generator
 def OneHotMux(p: Width) -> h.Module:
-    """ # One-Hot Selected Mux 
-    Selection input is one-hot encoded. Any conversion is to be done externally. """
+    """# One-Hot Selected Mux
+    Selection input is one-hot encoded. Any conversion is to be done externally."""
 
     m = h.Module()
 
@@ -34,8 +34,8 @@ def OneHotMux(p: Width) -> h.Module:
 
 @h.generator
 def TxSerializer(_: h.HasNoParams) -> h.Module:
-    """ Transmit Serializer 
-    Includes parallel-clock generation divider """
+    """Transmit Serializer
+    Includes parallel-clock generation divider"""
 
     m = h.Module()
     m.VDD, m.VSS = h.Ports(2)
@@ -57,4 +57,3 @@ def TxSerializer(_: h.HasNoParams) -> h.Module:
     )
 
     return m
-

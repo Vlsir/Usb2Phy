@@ -23,7 +23,7 @@ Nbias = NmosLvt(MosParams(w=1, l=1, m=100))
 
 @h.generator
 def CmlDelayBuf(p: CmlParams) -> h.Module:
-    """ # CML Delay Buffer """
+    """# CML Delay Buffer"""
 
     @h.module
     class CmlDelayBuf:
@@ -33,7 +33,7 @@ def CmlDelayBuf(p: CmlParams) -> h.Module:
         ## Differential Input & Output
         i = Diff(port=True, role=Diff.Roles.SINK)
         o = Diff(port=True, role=Diff.Roles.SOURCE)
-        
+
         ## Gate Bias for Current Sources
         bias = h.Input()
 
@@ -56,7 +56,7 @@ def CmlDelayBuf(p: CmlParams) -> h.Module:
 
 @h.generator
 def CmlXor(p: CmlParams) -> h.Module:
-    """ # CML XOR """
+    """# CML XOR"""
 
     @h.module
     class CmlXor:
@@ -73,7 +73,7 @@ def CmlXor(p: CmlParams) -> h.Module:
         biasdrain = h.Signal()
         ## Bias Current
         ni = Nbias(g=bias, d=biasdrain, s=VSS, b=VSS)
-        
+
         ## Intra-Quad Nets
         intra = h.Signal(width=4)
         ## Bottom Quad
@@ -100,7 +100,7 @@ def CmlXor(p: CmlParams) -> h.Module:
 
 @h.generator
 def CmlPulseGen(p: CmlParams) -> h.Module:
-    """ # CML Pulse Generator """
+    """# CML Pulse Generator"""
 
     @h.module
     class CmlPulseGen:
@@ -119,7 +119,8 @@ def CmlPulseGen(p: CmlParams) -> h.Module:
         ## Delay Buffer
         dly = Diff(desc="Delayed Input")
         buf = CmlDelayBuf(p)(
-            i=inp, o=dly,
+            i=inp,
+            o=dly,
             bias=ibias,
             VDD=VDD,
             VSS=VSS,
@@ -127,14 +128,17 @@ def CmlPulseGen(p: CmlParams) -> h.Module:
         ## Delay Buffer #2
         dly2 = Diff(desc="Delayed Input #2")
         buf2 = CmlDelayBuf(p)(
-            i=dly, o=dly2,
+            i=dly,
+            o=dly2,
             bias=ibias,
             VDD=VDD,
             VSS=VSS,
         )
         ## Xor
         xor = CmlXor(p)(
-            a=inp, b=dly2, x=out,
+            a=inp,
+            b=dly2,
+            x=out,
             bias=ibias,
             VDD=VDD,
             VSS=VSS,

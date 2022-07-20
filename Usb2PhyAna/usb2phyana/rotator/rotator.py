@@ -12,9 +12,9 @@ from ..logiccells import Inv, And2, FlopResetLow, FlopResetHigh
 
 @h.generator
 def OneHotRotator(p: Width) -> h.Module:
-    """ # One Hot Rotator 
-    A set of `p.width` flops with a one-hot state, which rotates by one bit on each clock cycle. 
-    When active-low reset-input `rstn` is asserted, the LSB is enabled. """
+    """# One Hot Rotator
+    A set of `p.width` flops with a one-hot state, which rotates by one bit on each clock cycle.
+    When active-low reset-input `rstn` is asserted, the LSB is enabled."""
 
     m = h.Module()
     m.VDD, m.VSS = h.Ports(2)

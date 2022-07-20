@@ -7,17 +7,17 @@ Conversion Modules between binary, one-hot, thermometer, and the like.
 import hdl21 as h
 
 # Local Imports
-from ..width import Width 
+from ..width import Width
 from ..logiccells import Inv, And2, And3, Or2
 
 
 @h.module
 class OneHotEncoder2to4:
-    """ 
+    """
     # One-Hot Encoder
-    2b to 4b with enable. 
-    Also serves as the base-case for the recursive `OneHotEncoder` generator. 
-    All outputs are low if enable-input `en` is low. 
+    2b to 4b with enable.
+    Also serves as the base-case for the recursive `OneHotEncoder` generator.
+    All outputs are low if enable-input `en` is low.
     """
 
     # IO Interface
@@ -44,12 +44,12 @@ class OneHotEncoder2to4:
 
 @h.module
 class OneHotEncoder3to8:
-    """ 
+    """
     # One-Hot Encoder
-    3b to 8b with enable. 
-    Also serves as a base-case for the recursive `OneHotEncoder` generator, 
-    for cases with an odd initial width. Uses the `2to4` version internally. 
-    All outputs are low if enable-input `en` is low. 
+    3b to 8b with enable.
+    Also serves as a base-case for the recursive `OneHotEncoder` generator,
+    for cases with an odd initial width. Uses the `2to4` version internally.
+    All outputs are low if enable-input `en` is low.
     """
 
     # IO Interface
@@ -70,11 +70,11 @@ class OneHotEncoder3to8:
 
 @h.generator
 def OneHotEncoder(p: Width) -> h.Module:
-    """ 
-    # One-Hot Encoder Generator 
-    Recursively creates a `p.width`-bit one-hot encoder Module comprised of `OneHotEncoder2to4`s. 
-    Also generates `OneHotEncoder` Modules for `p.width-2`, `p.width-4`, et al, down to 
-    the base case two to four bit Module. 
+    """
+    # One-Hot Encoder Generator
+    Recursively creates a `p.width`-bit one-hot encoder Module comprised of `OneHotEncoder2to4`s.
+    Also generates `OneHotEncoder` Modules for `p.width-2`, `p.width-4`, et al, down to
+    the base case two to four bit Module.
     """
 
     if p.width < 2:
@@ -89,7 +89,7 @@ def OneHotEncoder(p: Width) -> h.Module:
     m.VDD, m.VSS = h.Ports(2)
     m.en = h.Input(width=1, desc="Enable input. Active high.")
     m.bin = h.Input(width=p.width, desc="Binary valued input")
-    m.out = h.Output(width=2 ** p.width, desc="One-hot encoded output")
+    m.out = h.Output(width=2**p.width, desc="One-hot encoded output")
 
     # Thermo-encode the two MSBs, creating select signals for the LSBs
     m.lsb_sel = h.Signal(width=4)
@@ -109,9 +109,9 @@ def OneHotEncoder(p: Width) -> h.Module:
 
 @h.module
 class ThermoEncoder3to8:
-    """ 
+    """
     # Thermometer Encoder
-    3b to 8b with enable. Internally uses `OneHot3to8`. 
+    3b to 8b with enable. Internally uses `OneHot3to8`.
     """
 
     # IO Interface

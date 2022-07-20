@@ -22,7 +22,7 @@ Nbias = NmosLvt(MosParams(w=1, l=1, m=100))
 
 @h.generator
 def CmlBuf(p: CmlParams) -> h.Module:
-    """ # CML Buffer """
+    """# CML Buffer"""
 
     @h.module
     class CmlBuf:
@@ -32,7 +32,7 @@ def CmlBuf(p: CmlParams) -> h.Module:
         ## Differential Input & Output
         i = Diff(port=True, role=Diff.Roles.SINK)
         o = Diff(port=True, role=Diff.Roles.SOURCE)
-        
+
         ## Gate Bias for Current Sources
         ibias = h.Input()
 

@@ -11,8 +11,8 @@ import hdl21 as h
 
 
 def wrap(wrapper_name: str, wrapped_name: str, ports: Dict[str, str]) -> h.Module:
-    """ Wrap a foundry cell, creating an `ExternalModule` for it and a wrapper `Module` named `wrapper_name`. 
-    Ports map from {outer_name: inner_name}. Power and ground ports are added per the library conventions. """
+    """Wrap a foundry cell, creating an `ExternalModule` for it and a wrapper `Module` named `wrapper_name`.
+    Ports map from {outer_name: inner_name}. Power and ground ports are added per the library conventions."""
 
     # Create the wrapper module
     m = h.Module(name=wrapper_name)

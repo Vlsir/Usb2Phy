@@ -5,7 +5,7 @@
 # Hdl & PDK Imports
 import hdl21 as h
 from hdl21.primitives import Res, Cap, Vdc
-from hdl21.prefix import m 
+from hdl21.prefix import m
 import s130
 from s130 import MosParams
 
@@ -28,7 +28,7 @@ Nbias = NmosLvt(MosParams(w=1, l=1, m=100))
 
 @h.generator
 def NmosCmlStage(params: CmlParams) -> h.Module:
-    """ # CML Delay Buffer """
+    """# CML Delay Buffer"""
 
     Rl = Res(Res.Params(r=params.rl))
     Cl = Cap(Cap.Params(c=params.cl))
@@ -41,7 +41,7 @@ def NmosCmlStage(params: CmlParams) -> h.Module:
         ## Differential Input & Output
         i = h.Diff(port=True, role=h.Diff.Roles.SINK)
         o = h.Diff(port=True, role=h.Diff.Roles.SOURCE)
-        
+
         ## Gate Bias for Current Sources
         bias = h.Input()
 
@@ -60,7 +60,7 @@ def NmosCmlStage(params: CmlParams) -> h.Module:
 
 @h.generator
 def PmosCmlStage(params: CmlParams) -> h.Module:
-    """ # Pmos Input Cml Stage """
+    """# Pmos Input Cml Stage"""
 
     Cl = Cap(Cap.Params(c=params.cl))
 
@@ -72,7 +72,7 @@ def PmosCmlStage(params: CmlParams) -> h.Module:
         ## Differential Input & Output
         i = h.Diff(port=True, role=h.Diff.Roles.SINK)
         o = h.Diff(port=True, role=h.Diff.Roles.SOURCE)
-        
+
         ## Gate Bias for Current Sources
         pbias = h.Input()
         nbias = h.Port()
@@ -92,8 +92,8 @@ def PmosCmlStage(params: CmlParams) -> h.Module:
 
 @h.generator
 def BiasStage(params: CmlParams) -> h.Module:
-    """ "Dummy" Stage for Gnerating Nmos Load Bias 
-    Same as the normal stages, but with 2x the current, and producing the `nbias` output. """
+    """ "Dummy" Stage for Gnerating Nmos Load Bias
+    Same as the normal stages, but with 2x the current, and producing the `nbias` output."""
 
     Cl = Cap(Cap.Params(c=params.cl))
 
@@ -102,7 +102,7 @@ def BiasStage(params: CmlParams) -> h.Module:
         # IO Interface
         VDD, VSS = h.Ports(2)
         pbias, swing = h.Inputs(2)
-        nbias = h.Output() 
+        nbias = h.Output()
 
         # Internal Implementation
         fb = h.Signal()
@@ -120,7 +120,7 @@ def BiasStage(params: CmlParams) -> h.Module:
 
 @h.generator
 def CmlRo(params: CmlParams) -> h.Module:
-    """ # CML Ring Oscillator """
+    """# CML Ring Oscillator"""
 
     @h.module
     class CmlRo:
@@ -138,11 +138,19 @@ def CmlRo(params: CmlParams) -> h.Module:
         stg3 = h.Diff(port=True, role=h.Diff.Roles.SOURCE)
 
         ## Delay Stages
-        i0 = PmosCmlStage(params)(i=stg0, o=stg1, pbias=pbias, nbias=nbias, VDD=VDD, VSS=VSS)
-        i1 = PmosCmlStage(params)(i=stg1, o=stg2, pbias=pbias, nbias=nbias, VDD=VDD, VSS=VSS)
-        i2 = PmosCmlStage(params)(i=stg2, o=stg3, pbias=pbias, nbias=nbias, VDD=VDD, VSS=VSS)
-        i3 = PmosCmlStage(params)(i=stg3, o=h.inverse(stg0), pbias=pbias, nbias=nbias, VDD=VDD, VSS=VSS)
-        
+        i0 = PmosCmlStage(params)(
+            i=stg0, o=stg1, pbias=pbias, nbias=nbias, VDD=VDD, VSS=VSS
+        )
+        i1 = PmosCmlStage(params)(
+            i=stg1, o=stg2, pbias=pbias, nbias=nbias, VDD=VDD, VSS=VSS
+        )
+        i2 = PmosCmlStage(params)(
+            i=stg2, o=stg3, pbias=pbias, nbias=nbias, VDD=VDD, VSS=VSS
+        )
+        i3 = PmosCmlStage(params)(
+            i=stg3, o=h.inverse(stg0), pbias=pbias, nbias=nbias, VDD=VDD, VSS=VSS
+        )
+
         ## Nmos Bias Generaor Stage
         swing = h.Signal(desc="Voltage Swing Reference, will become an input")
         vdc_swing = Vdc(Vdc.Params(dc=250 * m))(p=swing, n=VSS)
@@ -158,20 +166,21 @@ def CmlRo(params: CmlParams) -> h.Module:
 
 @h.generator
 def Idac(_: h.HasNoParams) -> h.Module:
-    """ # Current Dac """
+    """# Current Dac"""
 
     Nswitch = NmosLvt(MosParams(m=4))
-    Nbias = NmosLvt(MosParams(w=1, l=1, m=1)) # ~ 0.3µA
+    Nbias = NmosLvt(MosParams(w=1, l=1, m=1))  # ~ 0.3µA
 
     @h.module
     class IdacUnit:
-        """ Dac Unit Current """
+        """Dac Unit Current"""
+
         # IO Interface
         VSS = h.Port()
         ## Primary I/O
         en = h.Input(desc="Unit Current Enable")
         out = h.Output(desc="Dac Output")
-        ## Gate Bias 
+        ## Gate Bias
         bias = h.Input(desc="Current Bias Input")
 
         # Switch Nmos
@@ -186,7 +195,7 @@ def Idac(_: h.HasNoParams) -> h.Module:
         ## Primary I/O
         code = h.Input(width=5, desc="Dac Code")
         out = h.Output(desc="Dac Output")
-        ## Bias input 
+        ## Bias input
         ibias = h.Input(desc="Current Bias Input")
 
         # Internal Implementation
@@ -200,24 +209,19 @@ def Idac(_: h.HasNoParams) -> h.Module:
         u2 = 4 * IdacUnit(bias=ibias, out=out, en=code[2], VSS=VSS)
         u3 = 8 * IdacUnit(bias=ibias, out=out, en=code[3], VSS=VSS)
         u4 = 16 * IdacUnit(bias=ibias, out=out, en=code[4], VSS=VSS)
-    
+
     return Idac
 
 
 @h.generator
 def CmosEdgeDetector(params: Width) -> h.Module:
-    """ # Cmos Single-Ended Input Falling-Edge Detector """
+    """# Cmos Single-Ended Input Falling-Edge Detector"""
 
     from ..logiccells import Inv, Nor3
     from hdl21.generators import SeriesPar
 
     # Call the series-parallel generator to get a delay-chain worth of inverters
-    DelayChain = SeriesPar(
-        unit=Inv,
-        series_conns=("i", "z"),
-        nser=11, 
-        npar=1
-    )
+    DelayChain = SeriesPar(unit=Inv, series_conns=("i", "z"), nser=11, npar=1)
 
     @h.module
     class CmosEdgeDetector:
@@ -225,19 +229,19 @@ def CmosEdgeDetector(params: Width) -> h.Module:
         VDD, VSS = h.Ports(2)
         ## Primary Input to be Edge-Detected
         inp = h.Input()
-        ## Enable / Strength Input. 
-        ## Only bits of `out` which have `en` asserted are ever asserted. 
+        ## Enable / Strength Input.
+        ## Only bits of `out` which have `en` asserted are ever asserted.
         en = h.Input(width=params.width)
         out = h.Output(width=params.width)
 
         # Internal Implementation
         ## Delayed, Inverted Input Signal
-        delayb = h.Signal() 
+        delayb = h.Signal()
         ## Delay Chain
         delay_chain = DelayChain(i=inp, z=delayb, VDD=VDD, VSS=VSS)
 
         ## Enable Inversions
-        enb = h.Signal(width=params.width) 
+        enb = h.Signal(width=params.width)
         eninvs = params.width * Inv()(i=en, z=enb, VDD=VDD, VSS=VSS)
 
         ## Edge detection logic: a bank of Nor3s
@@ -248,8 +252,8 @@ def CmosEdgeDetector(params: Width) -> h.Module:
 
 @h.generator
 def CmosInjector(params: Width) -> h.Module:
-    """ # Cmos Injection Cell 
-    Just a binary-weighted bank of Nmos pull-down transistors """
+    """# Cmos Injection Cell
+    Just a binary-weighted bank of Nmos pull-down transistors"""
 
     Nswitch = NmosLvt(MosParams(m=4))
 
@@ -260,10 +264,10 @@ def CmosInjector(params: Width) -> h.Module:
         inp = h.Input(width=params.width)
         out = h.Output(width=1)
 
-    C = CmosInjector # Give us a short name for all these references
+    C = CmosInjector  # Give us a short name for all these references
     for bit in range(params.width):
         # Create a 2^bit wide switch, and add it to Module `CmosInjector`
-        nsw = (2 ** bit) * Nswitch(g=C.inp[bit], d=C.out, s=C.VSS, b=C.VSS)
+        nsw = (2**bit) * Nswitch(g=C.inp[bit], d=C.out, s=C.VSS, b=C.VSS)
         C.add(name=f"nsw{bit}", val=nsw)
 
     return CmosInjector
@@ -271,7 +275,7 @@ def CmosInjector(params: Width) -> h.Module:
 
 @h.generator
 def CmlIlDco(params: CmlParams) -> h.Module:
-    """ # CML Injection-Locked, Digitally Controlled Oscillator """
+    """# CML Injection-Locked, Digitally Controlled Oscillator"""
 
     @h.module
     class CmlIlDco:
@@ -279,11 +283,11 @@ def CmlIlDco(params: CmlParams) -> h.Module:
         VDD, VSS = h.Ports(2)
         ## Bias input and gate
         ibias = h.Input(desc="Current Bias Input, Nmos-Side")
-        ## Frequency Code and Phase Injection 
+        ## Frequency Code and Phase Injection
         fctrl = h.Input(width=5, desc="Frequency Control Code")
         refclk = h.Input(desc="Reference Clock Input")
 
-        ## Oscillator Outputs 
+        ## Oscillator Outputs
         stg0 = h.Diff(port=True, role=h.Diff.Roles.SOURCE)
         stg1 = h.Diff(port=True, role=h.Diff.Roles.SOURCE)
         stg2 = h.Diff(port=True, role=h.Diff.Roles.SOURCE)
@@ -296,14 +300,18 @@ def CmlIlDco(params: CmlParams) -> h.Module:
 
         ## Frequency-Control Current Dac
         idac = Idac()(ibias=ibias, code=fctrl, out=pbias, VDD=VDD, VSS=VSS)
-        
-        ## Core Ring Oscillator 
-        ro = CmlRo(params)(stg0=stg0, stg1=stg1, stg2=stg2, stg3=stg3, pbias=pbias, VDD=VDD, VSS=VSS)
-        
-        ## Injection 
+
+        ## Core Ring Oscillator
+        ro = CmlRo(params)(
+            stg0=stg0, stg1=stg1, stg2=stg2, stg3=stg3, pbias=pbias, VDD=VDD, VSS=VSS
+        )
+
+        ## Injection
         _injection_strength = h.Concat(VSS, VSS, VDD)
         _off = h.Concat(VSS, VSS, VSS)
-        edet = CmosEdgeDetector(width=3)(inp=refclk, en=_injection_strength, VDD=VDD, VSS=VSS)
+        edet = CmosEdgeDetector(width=3)(
+            inp=refclk, en=_injection_strength, VDD=VDD, VSS=VSS
+        )
         ninj = 3 * Nswitch(g=edet.out, d=stg0.p, s=stg0.n, b=VSS)
         # inj0p = CmosInjector(width=3)(inp=edet.out, out=stg0.p, VDD=VDD, VSS=VSS)
         # inj0n = CmosInjector(width=3)(inp=_off, out=stg0.n, VDD=VDD, VSS=VSS)

@@ -20,15 +20,15 @@ from ...logiccells import Inv
 
 @h.paramclass
 class PiParams:
-    """ Phase Interpolator Parameters """
+    """Phase Interpolator Parameters"""
 
     nbits = h.Param(dtype=int, default=5, desc="Resolution, or width of select-input.")
 
 
 @h.generator
 def FineInterp(_: PiParams) -> h.Module:
-    """ # MSB Mux 
-    Generates pair of outputs "early clock" and "late clock" `qck` and `ick` dictated by `sel`. """
+    """# MSB Mux
+    Generates pair of outputs "early clock" and "late clock" `qck` and `ick` dictated by `sel`."""
 
     InterpTriInv = TriInv(width=1)
 
@@ -62,7 +62,7 @@ def FineInterp(_: PiParams) -> h.Module:
 
 @h.module
 class Mux2to1:
-    """ Two to One Tri-State Mux """
+    """Two to One Tri-State Mux"""
 
     # IO Interface
     VDD, VSS = h.Ports(2)
@@ -78,14 +78,16 @@ class Mux2to1:
 
 @h.generator
 def PhaseInterp(p: PiParams) -> h.Module:
-    """ Phase Interpolator Generator """
+    """Phase Interpolator Generator"""
 
     @h.module
     class PhaseInterp:
         # IO Interface
         VDD, VSS = h.Ports(2)
 
-        ckq = QuadClock(role=QuadClock.Roles.SINK, port=True, desc="Quadrature clock input")
+        ckq = QuadClock(
+            role=QuadClock.Roles.SINK, port=True, desc="Quadrature clock input"
+        )
         out = Diff(port=True, role=Diff.Roles.SOURCE, desc="Output clock")
         sel = h.Input(width=p.nbits, desc="Selection input")
 
@@ -95,14 +97,24 @@ def PhaseInterp(p: PiParams) -> h.Module:
 
         ## MSB Selection Mux
         qmux = Mux2to1(
-            if0=ckq.ck90, if1=ckq.ck270, sel=encoder.qmuxsel, out=qmuxck, VDD=VDD, VSS=VSS
+            if0=ckq.ck90,
+            if1=ckq.ck270,
+            sel=encoder.qmuxsel,
+            out=qmuxck,
+            VDD=VDD,
+            VSS=VSS,
         )
         imux = Mux2to1(
-            if0=ckq.ck0, if1=ckq.ck180, sel=encoder.imuxsel, out=imuxck, VDD=VDD, VSS=VSS
+            if0=ckq.ck0,
+            if1=ckq.ck180,
+            sel=encoder.imuxsel,
+            out=imuxck,
+            VDD=VDD,
+            VSS=VSS,
         )
 
         ## LSB / Fine Interpolator
-        ### FIXME: driving differential/ complementary output 
+        ### FIXME: driving differential/ complementary output
         fine = FineInterp(p)(
             qck=qmuxck,
             ick=imuxck,

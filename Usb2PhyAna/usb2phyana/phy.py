@@ -24,12 +24,12 @@ class Other:
 
 @h.bundle
 class AnaDigBundle:
-    """ 
+    """
     # Analog-Digital Signal Bundle
     Interface to the digital portion of the PHY
-    
-    Note all port-directions are from the perspective of `Usb2PhyAna`, the analog portion of the PHY. 
-    The digital half is not implemented with `hdl21.Bundle` and hence is never instantiated. 
+
+    Note all port-directions are from the perspective of `Usb2PhyAna`, the analog portion of the PHY.
+    The digital half is not implemented with `hdl21.Bundle` and hence is never instantiated.
     """
 
     tx_sclk = h.Output(width=1, desc="*Output* Serial TX Clock")
@@ -44,7 +44,7 @@ class AnaDigBundle:
     rx_pi_code = h.Input(width=5, desc="RX Phase Interpolator Code")
 
     squelch = h.Output(width=1, desc="Squelch Detector Output")
-    
+
     linestate_p, linestate_n = h.Outputs(2)
 
     # FIXME: organize these into sub-bundles
@@ -52,33 +52,35 @@ class AnaDigBundle:
 
 @h.module
 class FsTx:
-    """ USB Full-Speed (12Mb) TX """
-    
+    """USB Full-Speed (12Mb) TX"""
+
     VDD18, VDD33, VSS = h.Ports(3)
     pd_en, pu_en = h.Inputs(2)
     pads = Diff(desc="Differential Pads", port=True, role=Diff.Roles.SOURCE)
 
-    # FIXME: the actual implementation! 
+    # FIXME: the actual implementation!
 
 
 @h.module
 class TxPll:
-    """ # Transmit PLL 
-    Or, for now, a surrogate therefore, dividing a *higher* frequencey "refclk". """
-    
+    """# Transmit PLL
+    Or, for now, a surrogate therefore, dividing a *higher* frequencey "refclk"."""
+
     VDD18, VDD33, VSS = h.Ports(3)
     en = h.Input(desc="Enable")
     refck = Diff(port=True, role=Diff.Roles.SINK, desc="Reference Clock")
-    qck = QuadClock(port=True, role=QuadClock.Roles.SOURCE, desc="Output quadrature clock")
+    qck = QuadClock(
+        port=True, role=QuadClock.Roles.SOURCE, desc="Output quadrature clock"
+    )
 
-    # FIXME: the actual implementation! 
+    # FIXME: the actual implementation!
 
 
 @h.module
 class Usb2PhyAna:
-    """ 
-    # USB 2 PHY, Custom / Analog Portion 
-    Top-level module and primary export of this package. 
+    """
+    # USB 2 PHY, Custom / Analog Portion
+    Top-level module and primary export of this package.
     """
 
     # IO Interface
@@ -88,13 +90,14 @@ class Usb2PhyAna:
     refck = Diff(port=True, role=Diff.Roles.SINK, desc="Reference Clock")
 
     # Implementation
-    rck = Diff(desc="RX Recovered Clock", port=False, role=None) # FIXME: feeds into dig_if.rx_sclk
+    rck = Diff(
+        desc="RX Recovered Clock", port=False, role=None
+    )  # FIXME: feeds into dig_if.rx_sclk
     qck = QuadClock(desc="Quadrature clock")
 
-
-    ## Tx PLL / Quadrature Clock Generation 
+    ## Tx PLL / Quadrature Clock Generation
     txpll = TxPll(
-        en=VDD18, # FIXME!
+        en=VDD18,  # FIXME!
         refck=refck,
         qck=qck,
         VDD18=VDD18,
