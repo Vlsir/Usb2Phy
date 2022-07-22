@@ -12,7 +12,7 @@ from s130 import MosParams
 # Local Imports
 from ..cmlparams import CmlParams
 from ..width import Width
-
+from ..idac import NmosIdac as Idac
 
 Nmos = s130.modules.nmos
 NmosLvt = s130.modules.nmos_lvt
@@ -21,9 +21,9 @@ Pmos = s130.modules.pmos
 # Define a few reused device-parameter combos
 Pswitch = Pmos(MosParams(m=10))
 Pbias = Pmos(MosParams(w=1, l=1, m=100))
+PbiasHalf = Pmos(MosParams(w=1, l=1, m=50))
 Nswitch = NmosLvt(MosParams(m=10))
-Nload = Nmos(MosParams(w=1, l=1, m=10))
-Nbias = NmosLvt(MosParams(w=1, l=1, m=100))
+Nload = Nmos(MosParams(w=1, l=1, m=4))
 
 
 @h.generator
@@ -32,6 +32,7 @@ def NmosCmlStage(params: CmlParams) -> h.Module:
 
     Rl = Res(Res.Params(r=params.rl))
     Cl = Cap(Cap.Params(c=params.cl))
+    Nbias = NmosLvt(MosParams(w=1, l=1, m=100))
 
     @h.module
     class NmosCmlStage:
@@ -84,6 +85,7 @@ def PmosCmlStage(params: CmlParams) -> h.Module:
         ps = h.Pair(Pbias)(s=pi.d, g=i, d=h.inverse(o), b=VDD)
         ## Load Nmos
         nl = h.Pair(Nload)(d=o, g=nbias, s=VSS, b=VSS)
+        nd = h.Pair(Nload)(d=o, g=o, s=VSS, b=VSS)
         ## Load Caps
         cl = h.Pair(Cl)(p=o, n=VSS)
 
@@ -92,10 +94,8 @@ def PmosCmlStage(params: CmlParams) -> h.Module:
 
 @h.generator
 def BiasStage(params: CmlParams) -> h.Module:
-    """ "Dummy" Stage for Gnerating Nmos Load Bias
-    Same as the normal stages, but with 2x the current, and producing the `nbias` output."""
-
-    Cl = Cap(Cap.Params(c=params.cl))
+    """ # BiasStage
+    "Dummy" Stage for Gnerating Nmos Load Bias"""
 
     @h.module
     class BiasStage:
@@ -106,12 +106,12 @@ def BiasStage(params: CmlParams) -> h.Module:
 
         # Internal Implementation
         fb = h.Signal()
-        ## Current Bias
-        pi = 2 * Pbias(g=pbias, s=VDD, b=VDD)
-        ## Input Pair
+        ## Current Bias - Idac / 2
+        pi = PbiasHalf(g=pbias, s=VDD, b=VDD)
+        ## Input Pair - each Idac / 4 
         prf = Pswitch(s=pi.d, g=swing, d=nbias, b=VDD)
         pfb = Pswitch(s=pi.d, g=fb, d=fb, b=VDD)
-        ## Load Nmos
+        ## Load Nmos - each Idac / 4 
         ndi = Nload(d=nbias, g=nbias, s=VSS, b=VSS)
         nld = Nload(d=fb, g=nbias, s=VSS, b=VSS)
 
@@ -153,7 +153,7 @@ def CmlRo(params: CmlParams) -> h.Module:
 
         ## Nmos Bias Generaor Stage
         swing = h.Signal(desc="Voltage Swing Reference, will become an input")
-        vdc_swing = Vdc(Vdc.Params(dc=250 * m))(p=swing, n=VSS)
+        vdc_swing = Vdc(Vdc.Params(dc=700 * m))(p=swing, n=VSS)
         bias_stage = BiasStage(params)(
             swing=swing, pbias=pbias, nbias=nbias, VDD=VDD, VSS=VSS
         )
@@ -162,55 +162,6 @@ def CmlRo(params: CmlParams) -> h.Module:
         pb = Pbias(g=pbias, d=pbias, s=VDD, b=VDD)
 
     return CmlRo
-
-
-@h.generator
-def Idac(_: h.HasNoParams) -> h.Module:
-    """# Current Dac"""
-
-    Nswitch = NmosLvt(MosParams(m=4))
-    Nbias = NmosLvt(MosParams(w=1, l=1, m=1))  # ~ 0.3µA
-
-    @h.module
-    class IdacUnit:
-        """Dac Unit Current"""
-
-        # IO Interface
-        VSS = h.Port()
-        ## Primary I/O
-        en = h.Input(desc="Unit Current Enable")
-        out = h.Output(desc="Dac Output")
-        ## Gate Bias
-        bias = h.Input(desc="Current Bias Input")
-
-        # Switch Nmos
-        nsw = Nswitch(g=en, d=out, b=VSS)
-        # Bias Nmos
-        nb = Nbias(g=bias, d=nsw.s, s=VSS, b=VSS)
-
-    @h.module
-    class Idac:
-        # IO Interface
-        VDD, VSS = h.Ports(2)
-        ## Primary I/O
-        code = h.Input(width=5, desc="Dac Code")
-        out = h.Output(desc="Dac Output")
-        ## Bias input
-        ibias = h.Input(desc="Current Bias Input")
-
-        # Internal Implementation
-        ## Diode Transistor, with Drain Switch
-        udiode = 32 * IdacUnit(bias=ibias, out=ibias, en=VDD, VSS=VSS)
-        ## Always-On Current Transistor
-        uon = 64 * IdacUnit(bias=ibias, out=out, en=VDD, VSS=VSS)
-        ## Primary Dac Units
-        u0 = 1 * IdacUnit(bias=ibias, out=out, en=code[0], VSS=VSS)
-        u1 = 2 * IdacUnit(bias=ibias, out=out, en=code[1], VSS=VSS)
-        u2 = 4 * IdacUnit(bias=ibias, out=out, en=code[2], VSS=VSS)
-        u3 = 8 * IdacUnit(bias=ibias, out=out, en=code[3], VSS=VSS)
-        u4 = 16 * IdacUnit(bias=ibias, out=out, en=code[4], VSS=VSS)
-
-    return Idac
 
 
 @h.generator

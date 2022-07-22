@@ -45,9 +45,7 @@ class TbParams:
     # Required
     cml = h.Param(dtype=CmlParams, desc="Cml Generator Parameters")
     # Optional
-    pvt = h.Param(
-        dtype=Pvt, desc="Process, Voltage, and Temperature Parameters", default=Pvt()
-    )
+    pvt = h.Param(dtype=Pvt, desc="PVT Conditions", default=Pvt())
     code = h.Param(dtype=int, desc="DAC Code", default=16)
 
 

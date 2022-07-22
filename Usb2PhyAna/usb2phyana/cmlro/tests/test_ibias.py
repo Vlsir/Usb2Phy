@@ -35,6 +35,7 @@ cml = CmlParams(rl=30 * K, cl=10 * f, ib=30 * µ)
 ibs = [val * µ for val in range(5, 50, 5)]
 rls = [cml.rl] * len(ibs)
 # rls = [1.0 / float(ib) for ib in ibs]
+results_pickle_file = "scratch/cmlro.freq.pkl"
 
 
 @h.paramclass
@@ -130,6 +131,7 @@ def sim_input(tbgen: h.Generator, params: TbParams) -> hs.Sim:
         i = hs.Include(
             "/tools/B/dan_fritchman/dev/VlsirWorkspace/Usb2Phy/Usb2PhyAna/resources/scs130lp.sp"
         )
+        op = hs.Op()
 
     # Add the PDK dependencies
     CmlRoSim.add(*s130.install.include(params.pvt.p))
@@ -180,13 +182,13 @@ def run_corners(tbgen: h.Generator) -> Result:
     ]
     result = Result(conditions=conditions, ibs=ibs, rls=rls, results=[])
 
-    # Run conditions one at a time, parallelizing across PI codes
+    # Run conditions one at a time, parallelizing across bias currents
     for cond in conditions:
         print(f"Simulating (ib, freq) for {cond}")
         condition_results = ibias_sweep(tbgen, cond)
         result.results.append(condition_results)
 
-    pickle.dump(asdict(result), open("cmlro.freq.pkl", "wb"))
+    pickle.dump(asdict(result), open(results_pickle_file, "wb"))
     return result
 
 
@@ -219,6 +221,7 @@ def plot(result: Result, title: str, fname: str):
         ax.plot(ibs, freqs / 1e9, label=label)
 
     # Set up all the other data on our plot
+    ax.grid()
     ax.set_title(title)
     ax.set_xlabel("Ib (µA)")
     ax.set_ylabel("Freq (GHz)")
@@ -250,13 +253,14 @@ def run_typ():
 def test_cml_freq():
     """CmlRo Frequence Test(s)"""
 
-    run_typ()
+    # run_typ()
+    # raise TabError
 
     # # Run corner simulations to get results
     # result = run_corners(CmlRoFreqTb)
 
     # Or just read them back from file, if we have one
-    result = Result(**pickle.load(open("cmlro.freq.pkl", "rb")))
+    result = Result(**pickle.load(open(results_pickle_file, "rb")))
 
     # And make some pretty pictures
     plot(result, "Cml Ro - Freq vs Ibias", "CmlRoFreqIbias.png")

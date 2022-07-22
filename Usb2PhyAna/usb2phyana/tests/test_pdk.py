@@ -67,26 +67,11 @@ def test_iv():
         MosDut(pmos_hvt(MosParams()), MosType.PMOS),
     ]
 
-    # Dut = pmos_v5(IoMosParams()) # Default params
-    # Dut = pmos(MosParams()) # Default params
-    # NMOS = False  # FIXME: get this value, somewhere
-
     for dut in duts:
-        res = iv(dut)
-        print(res)
-
-    # And munge some results
-    res = res.an[0]  # Get the DC sweep
-    print(res.measurements)
-    id = np.abs(res.data["xtop.vd:p"])
-    gm = np.diff(id) / 10e-3
-    gm_over_id = gm / id[:-1]
-
-    # Save it to a plot
-    fig, ax = plt.subplots()
-    ax.plot(gm_over_id)
-    fig.savefig("gm_over_id.png")
-    # np.save("gm_over_id.npy", gm_over_id)
+        # Run some I-V simulation
+        result = iv(dut)
+        # And munge some results
+        postprocess(dut, result)
 
 
 def iv(Dut: MosDut) -> hs.SimResult:
@@ -107,8 +92,33 @@ def iv(Dut: MosDut) -> hs.SimResult:
     dc = sim.dc(
         var=vgs, sweep=LinearSweep(start=0, stop=2500 * m, step=10 * m), name="dc"
     )
-    ac = sim.ac(sweep=LogSweep(start=1, stop=1 * e(12), npts=100))
+    # ac = sim.ac(sweep=LogSweep(start=1, stop=1 * e(12), npts=100))
     # sim.meas(ac, "igate_at_1M", "find 'mag(i(xtop.vg))' at=1e6")
     # sim.meas(ac, "cin", "param='igate_at_1M / 2 / 3.14159 / 1e6'")
 
     return sim.run(sim_options)
+
+
+def postprocess(dut: MosDut, result: hs.SimResult) -> None:
+    result = result.an[0]  # Get the DC sweep
+    print(result.measurements)
+
+    step = float(10*m) # FIXME: get this from the sweep above
+
+    id = np.abs(result.data["xtop.vd:p"])
+    gm = np.diff(id) / step
+    gm_over_id = gm / id[:-1]
+    vgs = [1e3 * step * idx for idx in range(len(gm_over_id))]
+
+    # Save it to a plot
+    fig, ax = plt.subplots()
+    ax2 = ax.twinx()
+    ax.plot(vgs, gm_over_id)
+    ax.set_xlabel("Vgs (mV)")
+    ax.set_ylabel("gm / Id")
+    ax2.plot(vgs, 1e6 * id[:-1])
+    ax2.set_ylabel("Id (µA)")
+    ax2.set_yscale('log')
+    ax.grid()
+    fig.savefig(f"gm_over_id.{dut.dut.name}.png")
+    # np.save("gm_over_id.npy", gm_over_id)
