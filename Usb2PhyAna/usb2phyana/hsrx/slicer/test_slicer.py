@@ -5,6 +5,7 @@
 # Hdl & PDK Imports
 import hdl21 as h
 import hdl21.sim as hs
+from hdl21 import Diff
 from hdl21.pdk import Corner
 from hdl21.sim import Sim, LogSweep
 from hdl21.prefix import m, µ, f, n, PICO
@@ -17,7 +18,6 @@ from ...tests.diffclockgen import DiffClkGen, DiffClkParams
 
 # DUT Imports
 from .slicer import Slicer
-from .. import Diff
 
 
 @h.paramclass

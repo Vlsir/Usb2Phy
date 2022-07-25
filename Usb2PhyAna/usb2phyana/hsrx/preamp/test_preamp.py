@@ -5,6 +5,7 @@
 # Hdl & PDK Imports
 import hdl21 as h
 import hdl21.sim as hs
+from hdl21 import Diff
 from hdl21.pdk import Corner
 from hdl21.prefix import m, µ, f, n, T, PICO
 from hdl21.primitives import Vdc, Idc, C
@@ -15,7 +16,6 @@ from ...tests.sim_options import sim_options
 
 # DUT Imports
 from .preamp import PreAmp
-from .. import Diff
 from ...tests.diffclockgen import DiffClkGen, DiffClkParams
 
 

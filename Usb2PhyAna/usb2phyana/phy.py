@@ -6,8 +6,6 @@ USB 2.0 Phy Custom / Analog
 import hdl21 as h
 
 # Local Imports
-from .diff import Diff
-from .quadclock import QuadClock
 from .hstx import HsTx
 from .hsrx import HsRx
 
@@ -23,6 +21,15 @@ class Other:
 
 
 @h.bundle
+class PhySupplies:
+    """
+    # PHY Supply & Ground Signals
+    """
+
+    VDD18, VDD33, VSS = h.Signals(3)
+
+
+@h.bundle
 class AnaDigBundle:
     """
     # Analog-Digital Signal Bundle
@@ -32,20 +39,25 @@ class AnaDigBundle:
     The digital half is not implemented with `hdl21.Bundle` and hence is never instantiated.
     """
 
-    tx_sclk = h.Output(width=1, desc="*Output* Serial TX Clock")
-    tx_sdata = h.Input(width=1, desc="Serial TX Data")
+    hstx_sck = h.Output(width=1, desc="High-Speed TX *Output* Serial TX Clock")
+    hstx_sdata = h.Input(width=1, desc="High-Speed TX Data")
+    hstx_en = h.Input(width=1, desc="High-Speed TX Output Enable")
+    hstx_fctrl = h.Input(width=5, desc="TX Frequency Control Code")
 
-    fstx_pd_en = h.Input(desc="Full-speed pull-down enable")
-    fstx_pu_en = h.Input(desc="Full-speed pull-up enable")
+    hstx_pll_en = h.Input(desc="TX PLL Enable")
+    hstx_pll_phase_en = h.Input(desc="TX PLL Phase-Path Enable")
+    hstx_pll_bypass = h.Input(desc="Bypass TX PLL")
 
-    rx_sclk = h.Output(width=1, desc="*Output* RX Recovered Clock")
-    rx_sdata = h.Output(width=1, desc="Serial RX Data")
-    rx_edge = h.Output(width=1, desc="RX Edge Samples")
-    rx_pi_code = h.Input(width=5, desc="RX Phase Interpolator Code")
+    hsrx_sck = h.Output(width=1, desc="*Output* RX Recovered Clock")
+    hsrx_sdata = h.Output(width=1, desc="Serial RX Data")
+    hsrx_fctrl = h.Input(width=5, desc="RX Frequency Control Code")
+    hsrx_cdr_en = h.Input(desc="RX CDR Enable")
 
     squelch = h.Output(width=1, desc="Squelch Detector Output")
-
-    linestate_p, linestate_n = h.Outputs(2)
+    fstx_pd_en = h.Input(desc="Full-speed pull-down enable")
+    fstx_pu_en = h.Input(desc="Full-speed pull-up enable")
+    fsrx_diff = h.Output(desc="Differential Full-Speed RX")
+    fsrx_linestate_p, fsrx_linestate_n = h.Outputs(2, desc="Single Ended Line State")
 
     # FIXME: organize these into sub-bundles
 
@@ -56,75 +68,105 @@ class FsTx:
 
     VDD18, VDD33, VSS = h.Ports(3)
     pd_en, pu_en = h.Inputs(2)
-    pads = Diff(desc="Differential Pads", port=True, role=Diff.Roles.SOURCE)
+    pads = h.Diff(desc="Differential Pads", port=True, role=h.Diff.Roles.SOURCE)
 
     # FIXME: the actual implementation!
 
 
-@h.module
-class TxPll:
-    """# Transmit PLL
-    Or, for now, a surrogate therefore, dividing a *higher* frequencey "refclk"."""
+@h.generator
+def TxPll(_: h.HasNoParams) -> h.Module:
+    @h.module
+    class TxPll:
+        """# Transmit PLL"""
 
-    VDD18, VDD33, VSS = h.Ports(3)
-    en = h.Input(desc="Enable")
-    refck = Diff(port=True, role=Diff.Roles.SINK, desc="Reference Clock")
-    qck = QuadClock(
-        port=True, role=QuadClock.Roles.SOURCE, desc="Output quadrature clock"
-    )
+        # IO Interface
+        ## Supplies
+        VDD18, VDD33, VSS = h.Ports(3)
 
-    # FIXME: the actual implementation!
+        ## Primary Input & Output Clocks
+        refck = h.Diff(port=True, role=h.Diff.Roles.SINK, desc="Reference Clock")
+        bypck = h.Diff(port=True, role=h.Diff.Roles.SINK, desc="Bypass Clock")
+        txsck = h.Diff(
+            port=True, role=h.Diff.Roles.SOURCE, desc="Output TX Serial Clock"
+        )
+
+        ## Controls
+        en = h.Input(desc="PLL Enable")
+        phase_en = h.Input(desc="Phase Path Enable")
+        bypass = h.Input(desc="PLL Bypass Enable")
+
+        # Implementation
+        ## FIXME!
+        # ilo = Ilo()()
+        # bypass_mux = BypassMux()()
+
+    return TxPll
 
 
-@h.module
-class Usb2PhyAna:
-    """
-    # USB 2 PHY, Custom / Analog Portion
-    Top-level module and primary export of this package.
-    """
+@h.generator
+def Usb2PhyAna(_: h.HasNoParams) -> h.Module:
+    @h.module
+    class Usb2PhyAna:
+        """
+        # USB 2 PHY, Custom / Analog Portion
+        Top-level module and primary export of this package.
+        """
 
-    # IO Interface
-    VDD18, VDD33, VSS = h.Ports(3)
-    pads = Diff(desc="Differential Pads", port=True, role=None)
-    dig_if = AnaDigBundle(port=True)
-    refck = Diff(port=True, role=Diff.Roles.SINK, desc="Reference Clock")
+        # IO Interface
+        VDD18, VDD33, VSS = h.Ports(3)
+        pads = h.Diff(port=True, role=None, desc="Differential Pads")
+        dig_if = AnaDigBundle(port=True, desc="Analog-Digital Interface")
+        refck = h.Diff(port=True, role=h.Diff.Roles.SINK, desc="Reference Clock")
+        bypck = h.Diff(port=True, role=h.Diff.Roles.SINK, desc="TX PLL Bypass Clock")
 
-    # Implementation
-    rck = Diff(
-        desc="RX Recovered Clock", port=False, role=None
-    )  # FIXME: feeds into dig_if.rx_sclk
-    qck = QuadClock(desc="Quadrature clock")
+        # Implementation
+        # FIXME: feeds into dig_if
+        hstx_sck = h.Diff(desc="TX Serial Clock", port=False, role=None)
+        hsrx_sck = h.Diff(desc="RX Serial Clock", port=False, role=None)
 
-    ## Tx PLL / Quadrature Clock Generation
-    txpll = TxPll(
-        en=VDD18,  # FIXME!
-        refck=refck,
-        qck=qck,
-        VDD18=VDD18,
-        VDD33=VDD33,
-        VSS=VSS,
-    )
+        ## Bias Signals 
+        ## FIXME: add a bias block and generate these! 
+        pbias, nbias = h.Signals(2)
 
-    ## High-Speed TX
-    tx = HsTx(
-        pads=pads,
-        sdata=dig_if.tx_sdata,
-        sclk=h.AnonymousBundle(p=qck.ck0, n=qck.ck180),
-        VDD18=VDD18,
-        VDD33=VDD33,
-        VSS=VSS,
-    )
-    ## High-Speed RX
-    rx = HsRx(
-        pads=pads,
-        sclk=dig_if.rx_sclk,
-        sdata=dig_if.rx_sdata,
-        edge=dig_if.rx_edge,
-        pi_code=dig_if.rx_pi_code,
-        VDD18=VDD18,
-        VDD33=VDD33,
-        VSS=VSS,
-    )
-    ## All the other stuff: squelch etc.
-    ## Broken out into more Modules as we go.
-    other = Other()
+        ## Tx PLL
+        txpll = TxPll(h.Default)(
+            en=VDD18,  # FIXME!
+            phase_en=dig_if.hstx_pll_phase_en,
+            bypass=dig_if.hstx_pll_bypass,
+            refck=refck,
+            bypck=bypck,
+            txsck=hstx_sck,
+            VDD18=VDD18,
+            VDD33=VDD33,
+            VSS=VSS,
+        )
+
+        ## High-Speed TX
+        tx = HsTx(h.Default)(
+            pads=pads,
+            sdata=dig_if.hstx_sdata,
+            sclk=hstx_sck, 
+            pbias=pbias,
+            nbias=nbias,
+            VDD18=VDD18,
+            VDD33=VDD33,
+            VSS=VSS,
+        )
+        ## High-Speed RX
+        rx = HsRx(h.Default)(
+            pads=pads,
+            sck=dig_if.hsrx_sck,
+            sdata=dig_if.hsrx_sdata,
+            fctrl=dig_if.hsrx_fctrl,
+            cdr_en=dig_if.hsrx_cdr_en,
+            pbias=pbias,
+            nbias=nbias,
+            VDD18=VDD18,
+            VDD33=VDD33,
+            VSS=VSS,
+        )
+        ## All the other stuff: squelch etc.
+        ## Broken out into more Modules as we go.
+        other = Other()
+
+    return Usb2PhyAna

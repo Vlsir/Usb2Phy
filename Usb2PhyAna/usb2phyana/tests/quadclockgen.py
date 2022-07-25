@@ -9,7 +9,7 @@ import hdl21 as h
 from hdl21.primitives import Vpulse
 
 # Local Imports
-from .. import QuadClock
+from ..quadclock import QuadClock
 
 
 @h.paramclass

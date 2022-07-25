@@ -6,7 +6,6 @@
 import hdl21 as h
 
 # Local Imports
-from ..diff import Diff
 from ..width import Width
 from ..encoders import OneHotEncoder
 from ..counter import Counter

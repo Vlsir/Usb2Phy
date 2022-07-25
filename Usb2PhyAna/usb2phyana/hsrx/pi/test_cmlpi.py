@@ -5,14 +5,14 @@
 
 # Hdl & PDK Imports
 import hdl21 as h
+from hdl21 import Diff
 from hdl21.prefix import m, n, PICO, µ, f, K
 from hdl21.primitives import Vdc, Idc
 
 # DUT Imports
 from .cmlpi import PhaseInterp
 from .tb import TbParams
-from .. import Diff
-from .. import QuadClock
+from ...quadclock import QuadClock
 from ...cmlbuf import CmlBuf
 from ...cmlparams import CmlParams
 from ...tests.quadclockgen import QuadClockGen, QclkParams

@@ -4,9 +4,7 @@
 
 # Hdl & PDK Imports
 import hdl21 as h
-
-# Local Imports
-from ..diff import Diff
+from hdl21 import Diff
 
 
 @h.generator
@@ -50,22 +48,30 @@ class TxIo:
     cfg = TxConfig(desc="Configuration IO")
 
 
-@h.module
-class HsTx:
-    """
-    # High-Speed TX
-    """
+@h.generator
+def HsTx(_: h.HasNoParams) -> h.Module:
+    @h.module
+    class HsTx:
+        """
+        # High-Speed TX
+        """
 
-    # IO
-    VDD18, VDD33, VSS = h.Ports(3)
-    # io = TxIo(port=True) # FIXME: combined bundle
-    ## Pad Interface
-    pads = Diff(desc="Differential Transmit Pads", port=True, role=Diff.Roles.SOURCE)
-    ## Core Interface
-    sdata = h.Input(width=1, desc="Serial TX Data")
-    ## PLL Interface
-    sclk = Diff(desc="Serial Clock", port=True, role=Diff.Roles.SINK)
+        # IO
+        VDD18, VDD33, VSS = h.Ports(3)
+        # io = TxIo(port=True) # FIXME: combined bundle
+        ## Pad Interface
+        pads = Diff(
+            desc="Differential Transmit Pads", port=True, role=Diff.Roles.SOURCE
+        )
+        ## Core Interface
+        sdata = h.Input(width=1, desc="Serial TX Data")
+        ## PLL Interface
+        sclk = Diff(desc="Serial Clock", port=True, role=Diff.Roles.SINK)
+        ## Bias Inputs
+        pbias, nbias = h.Inputs(2)
 
-    # Internal Implementation
-    # ## Output Driver
-    # driver = TxDriver()(data=serializer.sdata, pads=pads, VDD=VDD, VSS=VSS)
+        # Internal Implementation
+        # ## Output Driver
+        # driver = TxDriver()(data=serializer.sdata, pads=pads, VDD=VDD, VSS=VSS)
+
+    return HsTx

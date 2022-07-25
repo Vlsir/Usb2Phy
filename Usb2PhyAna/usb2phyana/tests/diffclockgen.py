@@ -6,11 +6,9 @@ For simulation, from ideal pulse voltage sources
 
 # Hdl & PDK Imports
 import hdl21 as h
+from hdl21 import Diff
 import hdl21.sim as hs
 from hdl21.primitives import Vpulse
-
-# Local Imports
-from ..diff import Diff
 
 
 @h.paramclass

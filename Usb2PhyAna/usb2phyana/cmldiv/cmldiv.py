@@ -4,11 +4,11 @@
 
 # Hdl & PDK Imports
 import hdl21 as h
+from hdl21 import Diff, inverse
 import s130
 from s130 import MosParams
 
 # Local Imports
-from ..diff import Diff, inverse
 from ..cmlparams import CmlParams
 
 NmosLvt = s130.modules.nmos_lvt

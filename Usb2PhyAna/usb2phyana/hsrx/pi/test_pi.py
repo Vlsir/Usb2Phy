@@ -11,7 +11,7 @@ from hdl21.primitives import Vdc
 # DUT Imports
 from . import PhaseInterp
 from .tb import TbParams
-from .. import QuadClock
+from ...quadclock import QuadClock
 from ...diff import Diff
 from ...tests.quadclockgen import QuadClockGen, QclkParams
 

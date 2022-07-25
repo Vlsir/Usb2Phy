@@ -30,4 +30,4 @@ def test_netlisting():
     import sys
     from .. import Usb2PhyAna
 
-    h.netlist(h.to_proto(Usb2PhyAna), dest=sys.stdout)
+    h.netlist(Usb2PhyAna(), dest=sys.stdout)

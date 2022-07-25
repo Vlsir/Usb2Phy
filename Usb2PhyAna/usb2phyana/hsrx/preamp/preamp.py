@@ -27,12 +27,12 @@ class PreAmp:
     VDD33, VSS = h.Ports(2)
     inp = Diff(port=True, role=Diff.Roles.SINK)
     out = Diff(port=True, role=Diff.Roles.SOURCE)
-    ibias = h.Input()
+    pbias = h.Input()
 
     # Internal Implementation
     ## Bias Network
-    biasd = Pbias(g=ibias, d=ibias, s=VDD33, b=VDD33)
-    biast = 2 * Pbias(g=ibias, s=VDD33, b=VDD33)
+    biasd = Pbias(g=pbias, d=pbias, s=VDD33, b=VDD33)
+    biast = 2 * Pbias(g=pbias, s=VDD33, b=VDD33)
     ## Input Pair
     pinp = Psf(g=inp.p, d=out.n, s=biast.d, b=VDD33)
     pinn = Psf(g=inp.n, d=out.p, s=biast.d, b=VDD33)
