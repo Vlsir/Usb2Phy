@@ -132,7 +132,7 @@ def run_one() -> hs.SimResult:
     """Run a typical-case, mid-code sim"""
 
     print("Running Typical Conditions")
-    params = TbParams() ##Pvt(p=Corner.SLOW, v=1620 * m, t=75), code=31)
+    params = TbParams()
     results = sim_input(IloFreqTb, params).run(sim_options)
 
     print("Typical Condition Results:")
@@ -142,10 +142,10 @@ def run_one() -> hs.SimResult:
 def test_ilo_dac_code():
     """Cmos Ilo Dac Code vs Frequence Test(s)"""
 
-    # run_one()
+    run_one()
 
-    # # Run corner simulations to get results
-    # result = run_corners(IloFreqTb)
+    # Run corner simulations to get results
+    result = run_corners(IloFreqTb)
 
     # Or just read them back from file, if we have one
     result = Result(**pickle.load(open(result_pickle_file, "rb")))

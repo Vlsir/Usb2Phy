@@ -89,28 +89,6 @@ def IloSharedTb(params: TbParams, name: Optional[str] = None) -> h.Module:
     return tb
 
 
-@h.generator
-def IloInjectionTb(params: TbParams) -> h.Module:
-    """# Ilo Injection Testbench Generator"""
-
-    # Create our testbench
-    tb = IloSharedTb(params=params, name="IloInjectionTb")
-
-    # Create the injection-pulse source, which also serves as our kick-start
-    tb.vinj = Vpulse(
-        Vpulse.Params(
-            v1=0,
-            v2=1800 * m,
-            period=9900 * PICO,
-            rise=10 * PICO,
-            fall=10 * PICO,
-            width=1500 * PICO,
-            delay=0,
-        )
-    )(p=tb.inj, n=tb.VSS)
-
-    return tb
-
 
 @h.generator
 def IloFreqTb(params: TbParams) -> h.Module:
@@ -171,3 +149,11 @@ def sim_input(tbgen: h.Generator, params: TbParams) -> hs.Sim:
     IloSim.add(*s130.install.include(params.pvt.p))
 
     return IloSim
+
+
+def idd(results: hs.SimResult) -> float:
+    return results.an[0].measurements["idd"]
+
+
+def tperiod(results: hs.SimResult) -> float:
+    return results.an[0].measurements["tperiod"]

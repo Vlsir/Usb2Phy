@@ -89,8 +89,8 @@ def PmosIdac(_: h.HasNoParams) -> h.Module:
     ## Give `PmosIdac` a shorter identifier for adding these
     P = PmosIdac
 
-    ## Sizes per bit: 8, 16, 32, etc
-    size = lambda idx: 8 * (2 ** idx)
+    ## Sizes per bit: 4, 8, 16, etc
+    size = lambda idx: 4 * (2 ** idx)
 
     for idx in range(5):
         inst = size(idx) * PmosIdacUnit(
