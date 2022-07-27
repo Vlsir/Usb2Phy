@@ -22,7 +22,7 @@ from hdl21.primitives import Vdc, Vpulse, Idc, C
 import s130
 import sitepdks as _
 
-from ...tests.sim_options import sim_options
+from ..tests.sim_options import sim_options
 
 # DUT Imports
 from .ilo import IloParams

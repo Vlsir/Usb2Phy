@@ -12,8 +12,8 @@ import s130
 from s130 import MosParams
 
 # Local Imports
-from ...idac.pmos_cascode_idac import PmosIdac
-from ...width import Width
+from ..idac.pmos_cascode_idac import PmosIdac
+from ..width import Width
 
 
 PmosHvt = s130.modules.pmos_hvt
@@ -62,14 +62,17 @@ def IloStage(params: IloParams) -> h.Module:
 
         # Internal Implementation
         ## Forward Inverters
-        fwdp = IloInv(width=16)(i=inp.p, o=out.n, VDD=VDD, VSS=VSS)
-        fwdn = IloInv(width=16)(i=inp.n, o=out.p, VDD=VDD, VSS=VSS)
+        fwd = Pair(IloInv(width=16))(i=inp, o=out, VDD=VDD, VSS=VSS)
+        # fwdp = IloInv(width=16)(i=inp.p, o=out.n, VDD=VDD, VSS=VSS)
+        # fwdn = IloInv(width=16)(i=inp.n, o=out.p, VDD=VDD, VSS=VSS)
         ## Cross-Coupled Output Inverters
-        crossp = IloInv(width=4)(i=out.p, o=out.n, VDD=VDD, VSS=VSS)
-        crossn = IloInv(width=4)(i=out.n, o=out.p, VDD=VDD, VSS=VSS)
+        cross = Pair(IloInv(width=4))(i=out, o=inverse(out), VDD=VDD, VSS=VSS)
+        # crossp = IloInv(width=4)(i=out.p, o=out.n, VDD=VDD, VSS=VSS)
+        # crossn = IloInv(width=4)(i=out.n, o=out.p, VDD=VDD, VSS=VSS)
         ## Load Caps
-        clp = C(C.Params(c=params.cl))(p=out.p, n=VSS)
-        cln = C(C.Params(c=params.cl))(p=out.n, n=VSS)
+        cl = Pair(C(c=params.cl))(p=out, n=VSS)
+        # clp = C(C.Params(c=params.cl))(p=out.p, n=VSS)
+        # cln = C(C.Params(c=params.cl))(p=out.n, n=VSS)
 
     return IloStage
 
@@ -114,22 +117,24 @@ def IloRing(params: IloParams) -> h.Module:
 
 
 @h.generator
-def Ilo(params: IloParams) -> h.Module:
+def IloInner(params: IloParams) -> h.Module:
     """# Injection Locked Oscillator"""
 
     @h.module
-    class Ilo:
+    class IloInner:
         # IO
         VDDA33, VDD18, VSS = h.Ports(3)
         inj = h.Input()
         pbias = h.Input()
         fctrl = h.Input(width=5)
 
-        # Internal Implementation
+        # Ring stages, exposed as outputs
         stg0 = Diff(port=True, role=Diff.Roles.SOURCE)
         stg1 = Diff(port=True, role=Diff.Roles.SOURCE)
         stg2 = Diff(port=True, role=Diff.Roles.SOURCE)
         stg3 = Diff(port=True, role=Diff.Roles.SOURCE)
+
+        # Internal Implementation
         ring_top = h.Signal()
 
         ## Frequency-Control Current Dac
@@ -140,6 +145,42 @@ def Ilo(params: IloParams) -> h.Module:
         ## Core Ring
         ring = IloRing(params)(
             inj=inj, stg0=stg0, stg1=stg1, stg2=stg2, stg3=stg3, VDD=ring_top, VSS=VSS
+        )
+
+    return IloInner
+
+
+@h.generator
+def Ilo(params: IloParams) -> h.Module:
+    """# Injection Locked Oscillator"""
+
+    @h.module
+    class Ilo:
+        # IO
+        VDDA33, VDD18, VSS = h.Ports(3)
+        inj = h.Input()
+        pbias = h.Input()
+        fctrl = h.Input(width=5)
+        sck = h.Output(desc="Serial Output Clock")
+
+        # This level wraps the core ILO and adds the diff to single-ended level shifter
+        sck_n = h.Signal()
+        _stg0 = h.AnonymousBundle(p=sck, n=sck_n)
+        stg1 = Diff()
+        stg2 = Diff()
+        stg3 = Diff()
+
+        inner = IloInner(params)(
+            fctrl=fctrl,
+            inj=inj,
+            pbias=pbias,
+            stg0=_stg0,
+            stg1=stg1,
+            stg2=stg2,
+            stg3=stg3,
+            VDDA33=VDDA33,
+            VDD18=VDD18,
+            VSS=VSS,
         )
 
     return Ilo

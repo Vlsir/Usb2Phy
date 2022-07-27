@@ -13,11 +13,11 @@ from hdl21.primitives import Vdc, Vpulse, Idc
 import s130
 import sitepdks as _
 
-from ...tests.supplyvals import SupplyVals
-from ...tests.vcode import Vcode
+from ..tests.supplyvals import SupplyVals
+from ..tests.vcode import Vcode
 
 # DUT Imports
-from .ilo import Ilo, IloParams
+from .ilo import IloInner, IloParams
 
 
 @h.paramclass

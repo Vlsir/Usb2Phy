@@ -19,7 +19,7 @@ from hdl21.prefix import m, µ, f, K
 
 # Local Imports
 from .tb import IloFreqTb, Pvt, TbParams, sim_input
-from ...tests.sim_options import sim_options
+from ..tests.sim_options import sim_options
 
 
 # Module-wide reused parameters

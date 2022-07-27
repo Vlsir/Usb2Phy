@@ -8,6 +8,7 @@ import hdl21 as h
 # Local Imports
 from .preamp import PreAmp
 from .slicer import Slicer
+from ..ilo import Ilo
 
 
 @h.generator
@@ -25,16 +26,24 @@ def Cdr(_: h.HasNoParams) -> h.Module:
 
         ## Primary IO
         data = h.Diff(port=True, role=h.Diff.Roles.SINK, desc="RX Data")
-        rck = h.Diff(
-            port=True, role=h.Diff.Roles.SOURCE, desc="Recovered Differential Clock"
-        )
+        sck = h.Output(desc="RX Serial Clock")
         fctrl = h.Input(width=5, desc="RX Frequency Control Code")
         cdr_en = h.Input()
+        pbias = h.Input()
 
         # Implementation
         ## FIXME!
+        inj = h.Signal()
         # pulse_gen = DataPulseGen()(data=data)
-        # ilo = Ilo()()
+        ilo = Ilo(Ilo.Params())(  # FIXME!
+            VDDA33=VDD33,
+            VDD18=VDD18,
+            VSS=VSS,
+            inj=inj,
+            pbias=pbias,
+            fctrl=fctrl,
+            sck=sck,
+        )
 
     return Cdr
 
@@ -55,7 +64,7 @@ def HsRx(_: h.HasNoParams) -> h.Module:
             desc="Differential Receive Pads", port=True, role=h.Diff.Roles.SINK
         )
         ## Bias Inputs
-        pbias, nbias = h.Inputs(2)
+        pbias_cdr_120u, pbias_preamp_200u = h.Inputs(2)
 
         ## Digital Interface
         sck = h.Output(width=1, desc="*Output* RX Recovered Clock")
@@ -64,25 +73,27 @@ def HsRx(_: h.HasNoParams) -> h.Module:
         cdr_en = h.Input(desc="RX CDR Enable")
 
         # Internal Implementation
-        rck = h.Diff(port=False, desc="Recovered Differential Clock")
-        ## FIXME: diff to se driver for `rck` to create output `sclk`
+
         ## Pre-Amp
-        preamp = PreAmp(inp=pads, pbias=pbias, VDD33=VDD33, VSS=VSS)
+        preamp = PreAmp(inp=pads, pbias=pbias_preamp_200u, VDD33=VDD33, VSS=VSS)
+
         ## Clock Recovery
         cdr = Cdr()(
-            rck=rck,
+            sck=sck,
             fctrl=fctrl,
             cdr_en=cdr_en,
             data=preamp.out,
+            pbias=pbias_cdr_120u,
             VDD33=VDD33,
             VDD18=VDD18,
             VSS=VSS,
         )
+
         ## Slicer
         sdata_n = h.Signal()
         slicer = Slicer(
             inp=preamp.out,
-            clk=rck.p,
+            clk=sck,
             out=h.AnonymousBundle(p=sdata, n=sdata_n),  # FIXME: enable `NoConn` here
             VDD18=VDD18,
             VSS=VSS,
