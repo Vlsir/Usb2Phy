@@ -90,7 +90,7 @@ def PmosIdac(_: h.HasNoParams) -> h.Module:
     P = PmosIdac
 
     ## Sizes per bit: 4, 8, 16, etc
-    size = lambda idx: 4 * (2 ** idx)
+    size = lambda idx: 4 * (2**idx)
 
     for idx in range(5):
         inst = size(idx) * PmosIdacUnit(

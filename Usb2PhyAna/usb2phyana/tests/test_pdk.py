@@ -104,7 +104,7 @@ def postprocess(dut: MosDut, result: hs.SimResult) -> None:
     result = result.an[0]  # Get the DC sweep
     print(result.measurements)
 
-    step = float(10*m) # FIXME: get this from the sweep above
+    step = float(10 * m)  # FIXME: get this from the sweep above
 
     id = np.abs(result.data["xtop.vd:p"])
     gm = np.diff(id) / step
@@ -119,7 +119,7 @@ def postprocess(dut: MosDut, result: hs.SimResult) -> None:
     ax.set_ylabel("gm / Id")
     ax2.plot(vgs, 1e6 * id[:-1])
     ax2.set_ylabel("Id (µA)")
-    ax2.set_yscale('log')
+    ax2.set_yscale("log")
     ax.grid()
     fig.savefig(f"gm_over_id.{dut.dut.name}.png")
     # np.save("gm_over_id.npy", gm_over_id)

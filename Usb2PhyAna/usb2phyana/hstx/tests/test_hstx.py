@@ -46,7 +46,6 @@ class TbParams:
     ib = h.Param(dtype=h.ScalarOption, desc="Bias Current", default=100 * µ)
 
 
-
 @h.generator
 def HsTxDriverTb(params: TbParams) -> h.Module:
     """#  TX Driver Testbench"""

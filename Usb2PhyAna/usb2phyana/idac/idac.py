@@ -24,7 +24,7 @@ def NmosIdac(_: h.HasNoParams) -> h.Module:
     """# Nmos Current Dac"""
 
     Nswitch = NmosLvt(MosParams(m=4))
-    Nbias = NmosLvt(MosParams(w=1, l=20, m=1)) 
+    Nbias = NmosLvt(MosParams(w=1, l=20, m=1))
 
     @h.module
     class NmosIdacUnit:

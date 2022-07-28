@@ -89,7 +89,6 @@ def IloSharedTb(params: TbParams, name: Optional[str] = None) -> h.Module:
     return tb
 
 
-
 @h.generator
 def IloFreqTb(params: TbParams) -> h.Module:
     """Ilo Frequency Testbench"""

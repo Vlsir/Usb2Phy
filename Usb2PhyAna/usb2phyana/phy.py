@@ -43,7 +43,7 @@ class AnaDigBundle:
     hstx_sdata = h.Input(width=1, desc="High-Speed TX Data")
     hstx_shunt = h.Input(width=1, desc="High-Speed TX Shunt Drive Current")
     hstx_en = h.Input(width=1, desc="High-Speed TX Output Enable")
-    
+
     hstx_pll_fctrl = h.Input(width=5, desc="TX Frequency Control Code")
     hstx_pll_en = h.Input(desc="TX PLL Enable")
     hstx_pll_phase_en = h.Input(desc="TX PLL Phase-Path Enable")
@@ -125,8 +125,8 @@ def Usb2PhyAna(_: h.HasNoParams) -> h.Module:
         hstx_sck = h.Diff(desc="TX Serial Clock", port=False, role=None)
         hsrx_sck = h.Diff(desc="RX Serial Clock", port=False, role=None)
 
-        ## Bias Signals 
-        ## FIXME: add a bias block and generate these! 
+        ## Bias Signals
+        ## FIXME: add a bias block and generate these!
         pbias, nbias = h.Signals(2)
 
         ## Tx PLL
@@ -146,7 +146,7 @@ def Usb2PhyAna(_: h.HasNoParams) -> h.Module:
         tx = HsTx(h.Default)(
             pads=pads,
             sdata=dig_if.hstx_sdata,
-            sclk=hstx_sck, 
+            sclk=hstx_sck,
             pbias=pbias,
             nbias=nbias,
             VDD18=VDD18,

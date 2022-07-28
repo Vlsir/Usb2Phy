@@ -65,7 +65,7 @@ def IloInjectionTb(params: TbParams) -> h.Module:
         Vpulse.Params(
             v1=0,
             v2=1800 * m,
-            period=16667 * PICO, # ~ 60MHz
+            period=16667 * PICO,  # ~ 60MHz
             rise=10 * PICO,
             fall=10 * PICO,
             width=5 * PICO,

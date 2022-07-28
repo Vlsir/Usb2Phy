@@ -94,7 +94,7 @@ def PmosCmlStage(params: CmlParams) -> h.Module:
 
 @h.generator
 def BiasStage(params: CmlParams) -> h.Module:
-    """ # BiasStage
+    """# BiasStage
     "Dummy" Stage for Gnerating Nmos Load Bias"""
 
     @h.module
@@ -108,10 +108,10 @@ def BiasStage(params: CmlParams) -> h.Module:
         fb = h.Signal()
         ## Current Bias - Idac / 2
         pi = PbiasHalf(g=pbias, s=VDD, b=VDD)
-        ## Input Pair - each Idac / 4 
+        ## Input Pair - each Idac / 4
         prf = Pswitch(s=pi.d, g=swing, d=nbias, b=VDD)
         pfb = Pswitch(s=pi.d, g=fb, d=fb, b=VDD)
-        ## Load Nmos - each Idac / 4 
+        ## Load Nmos - each Idac / 4
         ndi = Nload(d=nbias, g=nbias, s=VSS, b=VSS)
         nld = Nload(d=fb, g=nbias, s=VSS, b=VSS)
 
