@@ -41,9 +41,10 @@ class AnaDigBundle:
 
     hstx_sck = h.Output(width=1, desc="High-Speed TX *Output* Serial TX Clock")
     hstx_sdata = h.Input(width=1, desc="High-Speed TX Data")
+    hstx_shunt = h.Input(width=1, desc="High-Speed TX Shunt Drive Current")
     hstx_en = h.Input(width=1, desc="High-Speed TX Output Enable")
-    hstx_fctrl = h.Input(width=5, desc="TX Frequency Control Code")
-
+    
+    hstx_pll_fctrl = h.Input(width=5, desc="TX Frequency Control Code")
     hstx_pll_en = h.Input(desc="TX PLL Enable")
     hstx_pll_phase_en = h.Input(desc="TX PLL Phase-Path Enable")
     hstx_pll_bypass = h.Input(desc="Bypass TX PLL")

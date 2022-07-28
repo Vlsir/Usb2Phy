@@ -65,6 +65,7 @@ def test_iv():
         MosDut(nmos_lvt(MosParams()), MosType.NMOS),
         MosDut(pmos(MosParams()), MosType.PMOS),
         MosDut(pmos_hvt(MosParams()), MosType.PMOS),
+        MosDut(pmos_v5(IoMosParams()), MosType.PMOS),
     ]
 
     for dut in duts:
