@@ -2,11 +2,10 @@
 # ILO Tests 
 """
 
-import pickle
-from typing import List, Tuple, Optional
+import pickle, io
+from typing import List
 from dataclasses import asdict
 from copy import copy
-from pathlib import Path
 
 from pydantic.dataclasses import dataclass
 import numpy as np
@@ -129,9 +128,11 @@ def tperiod(results: hs.SimResult) -> float:
     return results.an[0].measurements["tperiod"]
 
 
-def test_ilo_freq():
-    """Ilo Frequence Test(s)"""
+def run_one():
+    sim_input(tbgen=IloFreqTb, params=TbParams(pvt=Pvt(), ib=200 * µ)).run()
 
+
+def run_and_plot_corners():
     # Run corner simulations to get results
     result = run_corners(IloFreqTb)
 
@@ -140,3 +141,19 @@ def test_ilo_freq():
 
     # And make some pretty pictures
     plot(result, "Cmos Ilo Freq vs Ibias", "CmosIloFreqIbias.png")
+
+
+from ..tests.sim_test_mode import SimTestMode
+
+
+def test_ilo_freq(simtestmode: SimTestMode):
+    """Ilo Frequence Test(s)"""
+
+    if simtestmode == SimTestMode.NETLIST:
+        h.netlist(IloFreqTb(pvt=Pvt(), ib=200 * µ), dest=io.StringIO())
+    elif simtestmode == SimTestMode.MIN:
+        run_one()
+    elif simtestmode == SimTestMode.TYP:
+        ibias_sweep(pvt=Pvt())
+    else:
+        run_and_plot_corners()

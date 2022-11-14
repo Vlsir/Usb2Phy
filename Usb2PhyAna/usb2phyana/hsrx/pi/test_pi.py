@@ -3,6 +3,8 @@
 ## Testbench & Unit Tests
 """
 
+import io
+
 # Hdl & PDK Imports
 import hdl21 as h
 from hdl21.prefix import m, n, PICO
@@ -70,13 +72,25 @@ def PhaseInterpTb(p: TbParams) -> h.Module:
     return tb
 
 
-def test_phase_interp():
+from ...tests.sim_test_mode import SimTestMode
+
+
+def test_phase_interp(simtestmode: SimTestMode):
     """Phase Interpolator Test(s)"""
 
-    from .tb import sim
+    from .tb import sim_input
     from .compare import save_plot
 
-    params = [TbParams(code=code) for code in range(32)]
-    delays = [sim(tb=PhaseInterpTb(p), params=p) for p in params]
-    print(delays)
-    save_plot(delays, "CMOS PI", "cmospi.png")
+    if simtestmode == SimTestMode.NETLIST:
+        p = TbParams(code=15)
+        h.netlist(PhaseInterpTb(p), dest=io.StringIO())
+    elif simtestmode == SimTestMode.MIN:
+        # Just run one code
+        p = TbParams(code=15)
+        sim_input(tb=PhaseInterpTb(p), params=p).run()
+    else:
+        params = [TbParams(code=code) for code in range(32)]
+        # FIXME!:
+        delays = [sim(tb=PhaseInterpTb(p), params=p) for p in params]
+        print(delays)
+        save_plot(delays, "CMOS PI", "cmospi.png")

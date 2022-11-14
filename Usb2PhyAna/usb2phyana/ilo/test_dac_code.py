@@ -2,7 +2,7 @@
 # Cmos Ilo Dac Code Sweep 
 """
 
-import pickle
+import pickle, io
 from typing import List
 from dataclasses import asdict
 from copy import copy
@@ -139,11 +139,7 @@ def run_one() -> hs.SimResult:
     print(results)
 
 
-def test_ilo_dac_code():
-    """Cmos Ilo Dac Code vs Frequence Test(s)"""
-
-    run_one()
-
+def run_and_plot_corners():
     # Run corner simulations to get results
     result = run_corners(IloFreqTb)
 
@@ -152,3 +148,20 @@ def test_ilo_dac_code():
 
     # And make some pretty pictures
     plot(result, "Cmos Ilo - Dac vs Freq", "CmosIloDacFreq.png")
+
+
+from ..tests.sim_test_mode import SimTestMode
+
+
+def test_ilo_dac_code(simtestmode: SimTestMode):
+    """Cmos Ilo Dac Code vs Frequence Test(s)"""
+
+    if simtestmode == SimTestMode.NETLIST:
+        params = TbParams()
+        h.netlist(IloFreqTb(params), dest=io.StringIO())
+    elif simtestmode == SimTestMode.MIN:
+        run_one()
+    elif simtestmode == SimTestMode.TYP:
+        codesweep(pvt=Pvt())
+    else:
+        run_and_plot_corners()

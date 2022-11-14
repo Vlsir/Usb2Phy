@@ -2,7 +2,7 @@
 # High-Speed RX Tests
 """
 
-import pickle
+import pickle, io
 from typing import List, Tuple, Optional
 from dataclasses import asdict
 from copy import copy
@@ -22,6 +22,7 @@ from hdl21.primitives import Vdc, Vpulse, Idc, C
 import s130
 import sitepdks as _
 
+from ... import resources
 from ...tests.sim_options import sim_options
 from ...tests.supplyvals import SupplyVals
 from ...tests.diffclockgen import DiffClkGen
@@ -105,8 +106,7 @@ def HsRxTb(params: TbParams) -> h.Module:
     return tb
 
 
-def test_hsrx():
-    """High Speed RX Tests"""
+def sim_hsrx():
 
     params = TbParams()
 
@@ -129,12 +129,23 @@ def test_hsrx():
             simulator lang=spectre
         """
         )
-        i = hs.Include(
-            "/tools/B/dan_fritchman/dev/VlsirWorkspace/Usb2Phy/Usb2PhyAna/resources/scs130lp.sp"
-        )
+        i = hs.Include(resources / "scs130lp.sp")
 
     # Add the PDK dependencies
     HsrxSim.add(*s130.install.include(params.pvt.p))
 
     results = HsrxSim.run(sim_options)
     print(results)
+
+
+from ...tests.sim_test_mode import SimTestMode
+
+
+def test_hsrx(simtestmode: SimTestMode):
+    """High Speed RX Tests"""
+
+    if simtestmode in (SimTestMode.MIN, SimTestMode.NETLIST):
+        # Just run elaboration & netlisting
+        h.netlist(HsRx(h.Default), dest=io.StringIO())
+    else:
+        sim_hsrx()

@@ -45,6 +45,7 @@ setup(
             "pytest==7.1",
             "coverage",
             "pytest-cov",
+            "pytest-xdist[psutil]",
             "black==22.6",
             "pre-commit==2.20",
             "twine",

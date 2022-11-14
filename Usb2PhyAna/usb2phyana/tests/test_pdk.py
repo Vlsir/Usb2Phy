@@ -1,3 +1,4 @@
+import io
 from dataclasses import dataclass
 
 # PyPi Imports
@@ -18,7 +19,7 @@ from hdl21.primitives import MosType, Vdc
 
 # Local Imports
 from .sim_options import sim_options
-
+from ..tests.sim_test_mode import SimTestMode
 
 nmos = s130.modules.nmos
 nmos_lvt = s130.modules.nmos_lvt
@@ -27,7 +28,7 @@ pmos_hvt = s130.modules.pmos_hvt
 pmos_v5 = s130.modules.pmos_v5
 
 
-def test_pdk():
+def test_pdk(simtestmode: SimTestMode):
     """Non-PHY test that we can execute simulations with the installed PDK"""
 
     @h.module
@@ -43,10 +44,12 @@ def test_pdk():
         ipmos_hvt = pmos_hvt(MosParams())(d=VSS, g=VSS, s=VDD, b=VDD)
         ipmos_v5 = pmos_v5(IoMosParams())(d=VSS, g=VSS, s=VDD, b=VDD)
 
-    sim = Sim(tb=Tb, attrs=s130.install.include(Corner.TYP))
-    sim.tran(tstop=1 * µ, name="tran1")
-    res = sim.run(sim_options)
-    print(res)
+    if simtestmode == SimTestMode.NETLIST:
+        h.netlist(Tb, dest=io.StringIO())
+    else:
+        sim = Sim(tb=Tb, attrs=s130.install.include(Corner.TYP))
+        sim.tran(tstop=1 * µ, name="tran1")
+        sim.run(sim_options)
 
 
 @dataclass
@@ -57,6 +60,10 @@ class MosDut:
     mostype: MosType
 
 
+import pytest
+
+
+@pytest.mark.xfail(reason="https://github.com/dan-fritchman/Hdl21/issues/64")
 def test_iv():
     """I-V Curve Test"""
 
@@ -83,6 +90,7 @@ def iv(Dut: MosDut) -> hs.SimResult:
         VSS = h.Port()  # The testbench interface: sole port VSS
 
         dut = Dut.dut(s=VSS, b=VSS)
+        # FIXME: the string variant of the ideal primitives params went away...
         vd = Vdc(Vdc.Params(dc="polarity * vds", ac=0 * m))(p=dut.d, n=VSS)
         vg = Vdc(Vdc.Params(dc="polarity * vgs", ac=1 * UNIT))(p=dut.g, n=VSS)
 

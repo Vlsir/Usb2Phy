@@ -2,11 +2,10 @@
 # CML RO Tests 
 """
 
-import pickle
-from typing import List, Tuple
+import pickle, io
+from typing import List
 from dataclasses import asdict
 from copy import copy
-from pathlib import Path
 
 from pydantic.dataclasses import dataclass
 import numpy as np
@@ -250,12 +249,7 @@ def run_typ():
     print(results)
 
 
-def test_cml_freq():
-    """CmlRo Frequence Test(s)"""
-
-    # run_typ()
-    # raise TabError
-
+def run_and_plot_corners():
     # # Run corner simulations to get results
     # result = run_corners(CmlRoFreqTb)
 
@@ -264,3 +258,18 @@ def test_cml_freq():
 
     # And make some pretty pictures
     plot(result, "Cml Ro - Freq vs Ibias", "CmlRoFreqIbias.png")
+
+
+from ...tests.sim_test_mode import SimTestMode
+
+
+def test_cml_freq(simtestmode: SimTestMode):
+    """CmlRo Frequence Test(s)"""
+
+    if simtestmode == SimTestMode.MAX:
+        run_and_plot_corners()
+    elif simtestmode == SimTestMode.NETLIST:
+        params = TbParams(pvt=Pvt(), cml=CmlParams(rl=25 * K, cl=10 * f, ib=40 * µ))
+        h.netlist(CmlRoFreqTb(params), dest=io.StringIO())
+    else:
+        run_typ()

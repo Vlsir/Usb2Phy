@@ -146,7 +146,9 @@ def Usb2PhyAna(_: h.HasNoParams) -> h.Module:
         tx = HsTx(h.Default)(
             pads=pads,
             sdata=dig_if.hstx_sdata,
-            sclk=hstx_sck,
+            sck=hstx_sck,
+            shunt=VSS,  # FIXME!
+            en=VSS,  # FIXME!
             pbias=pbias,
             nbias=nbias,
             VDD18=VDD18,
@@ -160,8 +162,8 @@ def Usb2PhyAna(_: h.HasNoParams) -> h.Module:
             sdata=dig_if.hsrx_sdata,
             fctrl=dig_if.hsrx_fctrl,
             cdr_en=dig_if.hsrx_cdr_en,
-            pbias=pbias,
-            nbias=nbias,
+            pbias_cdr_120u=VSS,  # FIXME!
+            pbias_preamp_200u=VSS,  # FIXME!
             VDD18=VDD18,
             VDD33=VDD33,
             VSS=VSS,

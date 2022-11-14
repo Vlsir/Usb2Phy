@@ -2,7 +2,7 @@
 # CML RO DAC Code Sweep 
 """
 
-import pickle
+import pickle, io
 from typing import List
 from dataclasses import asdict
 from copy import copy
@@ -19,6 +19,7 @@ from hdl21.prefix import m, µ, f, K
 
 # Local Imports
 from ...tests.sim_options import sim_options
+from ...tests.sim_test_mode import SimTestMode
 from ...cmlparams import CmlParams
 from .tb import Pvt, TbParams, CmlRoFreqTb, sim_input, run_typ
 
@@ -125,11 +126,7 @@ def tperiod(results: hs.SimResult) -> float:
     return results.an[0].measurements["tperiod"]
 
 
-def test_cml_dac():
-    """CmlRo Frequence Test(s)"""
-
-    run_typ()
-
+def run_and_plot_corners():
     # Run corner simulations to get results
     result = run_corners(CmlRoFreqTb)
 
@@ -138,3 +135,15 @@ def test_cml_dac():
 
     # And make some pretty pictures
     plot(result, "CmlRoFreq", "CmlRoDac.png")
+
+
+def test_cml_dac(simtestmode: SimTestMode):
+    """CmlRo Frequence Test(s)"""
+
+    if simtestmode == SimTestMode.NETLIST:
+        params = TbParams(pvt=Pvt(), cml=CmlParams(rl=25 * K, cl=10 * f, ib=40 * µ))
+        h.netlist(CmlRoFreqTb(params), dest=io.StringIO())
+    elif simtestmode == SimTestMode.MAX:
+        run_and_plot_corners()
+    else:
+        run_typ()

@@ -2,8 +2,7 @@
 # OneHotRotator Tests
 """
 
-# PyPi Imports
-import numpy as np
+import io
 
 # HDL & PDK Imports
 import sitepdks as _
@@ -36,8 +35,8 @@ def rotator_tb() -> h.Module:
 
     tb.vsclk = Vpulse(
         Vpulse.Params(
-            delay=0,
-            v1=0,
+            delay=0 * m,
+            v1=0 * m,
             v2=1800 * m,
             period=2 * n,
             rise=1 * p,
@@ -48,19 +47,29 @@ def rotator_tb() -> h.Module:
     tb.vrstn = Vpulse(
         Vpulse.Params(
             delay=9500 * p,
-            v1=0,
+            v1=0 * m,
             v2=1800 * m,
-            period=2,
+            period=2000 * m,  # "Infinite" 2s period
             rise=1 * p,
             fall=1 * p,
-            width=1,
+            width=1000 * m,
         )
     )(p=tb.dut.rstn, n=tb.VSS)
 
     return tb
 
 
-def test_onehot_rotator():
+from ..tests.sim_test_mode import SimTestMode
+
+
+def test_onehot_rotator(simtestmode: SimTestMode):
+    if simtestmode == SimTestMode.NETLIST:
+        h.netlist(rotator_tb(), dest=io.StringIO())
+    else:
+        sim_onehot_rotator()
+
+
+def sim_onehot_rotator():
     """Simulate the `OneHotRotator`"""
     from hdl21.prefix import n
 

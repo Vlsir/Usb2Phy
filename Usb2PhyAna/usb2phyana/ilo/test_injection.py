@@ -2,7 +2,7 @@
 # ILO Tests 
 """
 
-import pickle
+import pickle, io
 from typing import List, Tuple, Optional
 from dataclasses import asdict
 from copy import copy
@@ -64,7 +64,7 @@ def IloInjectionTb(params: TbParams) -> h.Module:
     # Create the injection-pulse source, which also serves as our kick-start
     tb.vinj = Vpulse(
         Vpulse.Params(
-            v1=0,
+            v1=0 * m,
             v2=1800 * m,
             period=16667 * PICO,  # ~ 60MHz
             rise=10 * PICO,
@@ -77,9 +77,21 @@ def IloInjectionTb(params: TbParams) -> h.Module:
     return tb
 
 
-def test_ilo_injection():
-    """Ilo Injection Test(s)"""
+from ..tests.sim_test_mode import SimTestMode
 
+
+def test_ilo_injection(simtestmode: SimTestMode):
+    """Ilo Injection Test(s)"""
+    if simtestmode in (SimTestMode.MIN, SimTestMode.NETLIST):
+        # In min-mode just netlist
+        params = TbParams(pvt=Pvt(), ilo=IloParams(), code=1)
+        h.netlist(IloInjectionTb(params), dest=io.StringIO())
+    else:
+        # And in any other mode run simulation
+        sim_ilo_injection()
+
+
+def sim_ilo_injection():
     # Get the best DAC code from saved frequency-sweep results
     pvt = Pvt()
     dac_code_result = Result(**pickle.load(open(dac_code_result_pickle_file, "rb")))

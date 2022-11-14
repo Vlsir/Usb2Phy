@@ -2,6 +2,8 @@
 # RX Pre-Amp Tests 
 """
 
+import io
+
 # Hdl & PDK Imports
 import hdl21 as h
 import hdl21.sim as hs
@@ -73,9 +75,9 @@ def PreAmpTb(p: TbParams) -> h.Module:
     ## For Ac: the "balnun"
     ## tb.balun = Balun(vc=p.vc)(diff=tb.inp, VSS=tb.VSS)
     ## For Tran: generate a differential clock pattern
-    tb.ckg = DiffClkGen(period=4 * n, delay=0, vd=200 * m, vc=200 * m, trf=800 * PICO)(
-        ck=tb.inp, VSS=tb.VSS
-    )
+    tb.ckg = DiffClkGen(
+        period=4 * n, delay=0 * m, vd=200 * m, vc=200 * m, trf=800 * PICO
+    )(ck=tb.inp, VSS=tb.VSS)
 
     # Output & Load Caps
     tb.out = Diff()
@@ -93,14 +95,25 @@ def PreAmpTb(p: TbParams) -> h.Module:
     tb.dut = PreAmp(
         inp=tb.inp,
         out=tb.out,
-        ibias=ibias,
+        pbias=ibias,
         VDD33=tb.VDD,
         VSS=tb.VSS,
     )
     return tb
 
 
-def test_preamp_sim():
+from ...tests.sim_test_mode import SimTestMode
+
+
+def test_preamp(simtestmode: SimTestMode):
+    if simtestmode == SimTestMode.NETLIST:
+        params = TbParams(pvt=Pvt(), vc=200 * m, cl=10 * f, ib=200 * µ)
+        h.netlist(PreAmpTb(params), dest=io.StringIO())
+    else:
+        sim_preamp()
+
+
+def sim_preamp():
     """Pre-Amp Test(s)"""
 
     # Create our parametric testbench

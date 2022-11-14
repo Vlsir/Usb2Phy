@@ -4,8 +4,7 @@
 """
 
 # Std-Lib Imports
-import copy
-from pathlib import Path
+import io
 
 # Hdl & PDK Imports
 import sitepdks as _
@@ -99,8 +98,19 @@ def sim_thermo_encoder(p: TbParams) -> None:
         assert therm[idx] < 0.01 * float(p.VDD)
 
 
-def test_thermo_encoder():
+from ..tests.sim_test_mode import SimTestMode
+
+
+def test_thermo_encoder(simtestmode: SimTestMode):
     """Thermo Encoder Test(s)"""
-    for code in range(8):
+    if simtestmode == SimTestMode.NETLIST:
+        p = TbParams(VDD=1800 * m, code=1, width=3)
+        return h.netlist(ThermoEncoderTb(p), dest=io.StringIO())
+    if simtestmode == SimTestMode.MIN:
+        codes = [5]  # Just run one code
+    else:
+        codes = range(8)
+
+    for code in codes:
         p = TbParams(VDD=1800 * m, code=code, width=3)
         sim_thermo_encoder(p)

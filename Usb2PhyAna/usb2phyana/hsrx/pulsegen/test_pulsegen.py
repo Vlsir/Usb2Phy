@@ -3,6 +3,8 @@
 ## Unit Tests
 """
 
+import io
+
 # Hdl & PDK Imports
 import sitepdks as _
 import s130
@@ -76,8 +78,19 @@ def CmlPulseGenTb(params: TbParams) -> h.Module:
     return tb
 
 
-def test_cml_pulsegen():
-    """CML Divider Test(s)"""
+from ...tests.sim_test_mode import SimTestMode
+
+
+def test_cml_pulsegen(simtestmode: SimTestMode):
+    if simtestmode == SimTestMode.NETLIST:
+        params = TbParams(pvt=Pvt(), cml=CmlParams(rl=4 * K, cl=25 * f, ib=250 * µ))
+        h.netlist(CmlPulseGenTb(params), dest=io.StringIO())
+    else:
+        sim_cml_pulsegen()
+
+
+def sim_cml_pulsegen():
+    """CML Divider Sim(s)"""
 
     params = TbParams(pvt=Pvt(), cml=CmlParams(rl=4 * K, cl=25 * f, ib=250 * µ))
     sim = Sim(tb=CmlPulseGenTb(params), attrs=s130.install.include(params.pvt.p))

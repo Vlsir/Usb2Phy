@@ -75,7 +75,7 @@ def IloSharedTb(params: TbParams, name: Optional[str] = None) -> h.Module:
     tb.inj = h.Signal()
 
     # Create the Ilo DUT
-    tb.dut = Ilo(params.ilo)(
+    tb.dut = IloInner(params.ilo)(
         fctrl=fctrl,
         inj=tb.inj,
         pbias=pbias,
@@ -101,11 +101,11 @@ def IloFreqTb(params: TbParams) -> h.Module:
     tb.vinj = Vpulse(
         Vpulse.Params(
             v1=1800 * m,
-            v2=0,
-            period=1001,  # "Infinite" period
+            v2=0 * m,
+            period=1001 * m,  # "Infinite" period
             rise=10 * PICO,
             fall=10 * PICO,
-            width=1000,
+            width=1000 * m,
             delay=10 * PICO,
         )
     )(p=tb.inj, n=tb.VSS)

@@ -2,7 +2,7 @@
 # Pmos Idac Test(s)
 """
 
-import pickle
+import pickle, io
 from typing import List
 from dataclasses import asdict
 from copy import copy
@@ -79,7 +79,7 @@ def IdacSweepTb(params: TbParams) -> h.Module:
     # tb.out, tb.pbias = out, pbias = h.Signals(2)
     # tb.pload = Pbias(g=pbias, d=pbias, s=VDD, b=VDD)
     tb.out = out = h.Signal()
-    tb.vout = Vdc(dc=0, ac=0 * m)(p=out, n=tb.VSS)
+    tb.vout = Vdc(dc=0 * m, ac=0 * m)(p=out, n=tb.VSS)
 
     # Create the DUT
     tb.dut = PmosIdac()(
@@ -218,11 +218,7 @@ def plot(result: Result, title: str, fname: str):
     fig.savefig(fname)
 
 
-def test_idac_code_sweep():
-    """Test DAC Code Sweep"""
-
-    run_one()
-
+def run_and_plot_corners():
     # Run corner simulations to get results
     result = run_corners(IdacSweepTb)
 
@@ -231,3 +227,20 @@ def test_idac_code_sweep():
 
     # And make some pretty pictures
     plot(result, "IdacCodeSweep", "IdacCodeSweep.png")
+
+
+from ..tests.sim_test_mode import SimTestMode
+
+
+def test_idac_code_sweep(simtestmode: SimTestMode):
+    """Test DAC Code Sweep"""
+
+    if simtestmode == SimTestMode.NETLIST:
+        params = TbParams(pvt=Pvt(), code=16)
+        h.netlist(IdacSweepTb(params), dest=io.StringIO())
+    elif simtestmode == SimTestMode.MIN:
+        run_one()
+    elif simtestmode == SimTestMode.TYP:
+        codesweep(pvt=Pvt())
+    else:
+        run_and_plot_corners()

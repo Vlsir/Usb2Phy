@@ -3,6 +3,8 @@
 ## Unit Tests
 """
 
+import io
+
 # Hdl & PDK Imports
 import sitepdks as _
 import s130
@@ -57,9 +59,20 @@ def CmlDivTb(params: CmlParams) -> h.Module:
     return tb
 
 
-def test_cml_div():
+from ..tests.sim_test_mode import SimTestMode
+
+
+def test_cml_div(simtestmode: SimTestMode):
     """CML Divider Test(s)"""
 
+    if simtestmode == SimTestMode.NETLIST:
+        params = CmlParams(rl=4 * K, cl=25 * f, ib=250 * µ)
+        h.netlist(CmlDivTb(params), dest=io.StringIO())
+    else:
+        sim_cml_div()
+
+
+def sim_cml_div():
     params = CmlParams(rl=4 * K, cl=25 * f, ib=250 * µ)
     sim = Sim(tb=CmlDivTb(params), attrs=s130.install.include(Corner.TYP))
     sim.tran(tstop=12 * n)

@@ -2,6 +2,8 @@
 # Slicer Tests 
 """
 
+import io
+
 # Hdl & PDK Imports
 import hdl21 as h
 import hdl21.sim as hs
@@ -59,8 +61,8 @@ def SlicerTb(p: TbParams) -> h.Module:
     tb.clk = clk = h.Signal()
     tb.vclk = Vpulse(
         Vpulse.Params(
-            delay=0,
-            v1=0,
+            delay=0 * m,
+            v1=0 * m,
             v2=p.pvt.v,
             period=2 * n,
             rise=1 * PICO,
@@ -86,7 +88,18 @@ def SlicerTb(p: TbParams) -> h.Module:
     return tb
 
 
-def test_slicer_sim():
+from ...tests.sim_test_mode import SimTestMode
+
+
+def test_slicer(simtestmode: SimTestMode):
+    if simtestmode == SimTestMode.NETLIST:
+        params = TbParams(pvt=Pvt(), vc=900 * m, vd=1 * m)
+        h.netlist(SlicerTb(params), dest=io.StringIO())
+    else:
+        sim_slicer()
+
+
+def sim_slicer():
     """Slicer Test(s)"""
 
     # Create our parametric testbench
