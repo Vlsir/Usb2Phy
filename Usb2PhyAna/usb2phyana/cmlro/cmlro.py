@@ -153,7 +153,7 @@ def CmlRo(params: CmlParams) -> h.Module:
 
         ## Nmos Bias Generaor Stage
         swing = h.Signal(desc="Voltage Swing Reference, will become an input")
-        vdc_swing = Vdc(Vdc.Params(dc=700 * m))(p=swing, n=VSS)
+        vdc_swing = Vdc(Vdc.Params(dc=700 * m, ac=0 * m))(p=swing, n=VSS)
         bias_stage = BiasStage(params)(
             swing=swing, pbias=pbias, nbias=nbias, VDD=VDD, VSS=VSS
         )

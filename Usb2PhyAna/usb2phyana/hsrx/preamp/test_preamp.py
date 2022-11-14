@@ -16,7 +16,7 @@ from ...tests.sim_options import sim_options
 
 # DUT Imports
 from .preamp import PreAmp
-from ...tests.diffclockgen import DiffClkGen, DiffClkParams
+from ...tests.diffclockgen import DiffClkGen
 
 
 @h.paramclass
@@ -30,9 +30,9 @@ def Balun(p: BalunParams) -> h.Module:
     class Balun:
         diff = Diff(port=True, role=Diff.Roles.SOURCE)
         VSS = h.Port()
-        vc = Vdc(Vdc.Params(dc=p.vc, ac=0))(n=VSS)
-        vp = Vdc(Vdc.Params(dc=0, ac=500 * m))(p=diff.p, n=vc.p)
-        vn = Vdc(Vdc.Params(dc=0, ac=-500 * m))(p=diff.n, n=vc.p)
+        vc = Vdc(Vdc.Params(dc=p.vc, ac=0 * m))(n=VSS)
+        vp = Vdc(Vdc.Params(dc=0 * m, ac=500 * m))(p=diff.p, n=vc.p)
+        vn = Vdc(Vdc.Params(dc=0 * m, ac=-500 * m))(p=diff.n, n=vc.p)
 
     return Balun
 
@@ -64,7 +64,7 @@ def PreAmpTb(p: TbParams) -> h.Module:
     tb = h.sim.tb("PreAmpTb")
     # Generate and drive VDD
     tb.VDD = VDD = h.Signal()
-    tb.vvdd = Vdc(Vdc.Params(dc=p.pvt.v))(p=tb.VDD, n=tb.VSS)
+    tb.vvdd = Vdc(Vdc.Params(dc=p.pvt.v, ac=0 * m))(p=tb.VDD, n=tb.VSS)
 
     # Input voltage
     tb.inp = Diff()

@@ -16,8 +16,8 @@ from hdl21.prefix import m
 class SupplyVals:
     """Supply Voltage Values"""
 
-    VDD18: h.ScalarParam
-    VDDA33: h.ScalarParam
+    VDD18: h.Prefixed
+    VDDA33: h.Prefixed
 
     VDD18_VALS: ClassVar[List] = [1620 * m, 1800 * m, 1980 * m]
     VDDA33_VALS: ClassVar[List] = [2970 * m, 3300 * m, 3630 * m]

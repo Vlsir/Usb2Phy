@@ -58,7 +58,7 @@ def CmlRoFreqTb(params: TbParams) -> h.Module:
 
     # Generate and drive VDD
     tb.VDD = VDD = h.Signal()
-    tb.vvdd = Vdc(Vdc.Params(dc=params.pvt.v))(p=VDD, n=tb.VSS)
+    tb.vvdd = Vdc(Vdc.Params(dc=params.pvt.v, ac=0 * m))(p=VDD, n=tb.VSS)
 
     # Bias Generation
     tb.ibias = ibias = h.Signal()
@@ -86,7 +86,7 @@ def CmlRoFreqTb(params: TbParams) -> h.Module:
 
     # Ref Clock Generation
     tb.refclk = h.Signal()
-    tb.vrefclk = Vdc(Vdc.Params(dc=0))(p=tb.refclk, n=tb.VSS)
+    tb.vrefclk = Vdc(Vdc.Params(dc=0 * m, ac=0 * m))(p=tb.refclk, n=tb.VSS)
     # tb.vrefclk = Vpulse(Vpulse.Params(delay=5 * n, v1=0, v2=params.pvt.v, period=32 * n, rise=100 * p, fall=100 * p, width=16 * n))(p=tb.refclk, n=tb.VSS)
 
     # Create the DUT

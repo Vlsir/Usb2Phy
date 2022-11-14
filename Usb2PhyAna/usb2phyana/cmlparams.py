@@ -6,6 +6,6 @@ import hdl21 as h
 class CmlParams:
     """CML Parameters"""
 
-    rl = h.Param(dtype=h.ScalarParam, desc="Load Res Value (Ohms)")
-    cl = h.Param(dtype=h.ScalarParam, desc="Load Cap Value (F)")
-    ib = h.Param(dtype=h.ScalarParam, desc="Bias Current Value (A)")
+    rl = h.Param(dtype=h.Prefixed, desc="Load Res Value (Ohms)")
+    cl = h.Param(dtype=h.Prefixed, desc="Load Cap Value (F)")
+    ib = h.Param(dtype=h.Prefixed, desc="Bias Current Value (A)")

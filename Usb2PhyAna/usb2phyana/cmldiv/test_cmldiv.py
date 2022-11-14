@@ -33,7 +33,7 @@ def CmlDivTb(params: CmlParams) -> h.Module:
     tb.ckgen = DiffClkGen(ckp)(ck=ckg, VSS=tb.VSS)
 
     tb.VDD = h.Signal()
-    tb.vvdd = Vdc(Vdc.Params(dc=1800 * m))(p=tb.VDD, n=tb.VSS)
+    tb.vvdd = Vdc(Vdc.Params(dc=1800 * m, ac=0 * m))(p=tb.VDD, n=tb.VSS)
 
     # CML buffer the input clock, bring it into our CML levels
     tb.bufbias = bufbias = h.Signal()

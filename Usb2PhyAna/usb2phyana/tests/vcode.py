@@ -14,9 +14,9 @@ class Params:
     # Required
     code = h.Param(dtype=int, desc="Binary-Valued Code")
     width = h.Param(dtype=int, desc="Bus Width")
-    vhi = h.Param(dtype=h.ScalarParam, desc="High Voltage Level")
+    vhi = h.Param(dtype=h.Prefixed, desc="High Voltage Level")
     # Optional
-    vlo = h.Param(dtype=h.ScalarParam, desc="Low Voltage Level", default=0)
+    vlo = h.Param(dtype=h.Prefixed, desc="Low Voltage Level", default=0 * h.Prefix.UNIT)
 
 
 @h.generator
@@ -34,7 +34,7 @@ def Vcode(params: Params) -> h.Module:
     def vbit(i: int) -> Vdc:
         """Create a `Vdc` call equal to either `params.vhi` or `params.vlo`."""
         val = params.vhi if i else params.vlo
-        return Vdc(Vdc.Params(dc=val))
+        return Vdc(Vdc.Params(dc=val, ac=0 * h.Prefix.UNIT))
 
     # Convert the binary integer value to a binary-valued string
     bits = bin(params.code)[2:].zfill(params.width)

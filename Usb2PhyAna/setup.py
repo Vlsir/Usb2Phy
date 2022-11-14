@@ -15,7 +15,7 @@ here = pathlib.Path(__file__).parent.resolve()
 # Get the long description from the README file
 long_description = (here / "readme.md").read_text(encoding="utf-8")
 
-_VLSIR_VERSION = "2.0.dev0"
+_VLSIR_VERSION = "3.0.dev0"
 
 setup(
     name="usb2phyana",
@@ -32,6 +32,7 @@ setup(
         f"vlsir=={_VLSIR_VERSION}",
         f"vlsirtools=={_VLSIR_VERSION}",
         f"hdl21=={_VLSIR_VERSION}",
+        f"s130-hdl21=={_VLSIR_VERSION}",
         "pydantic==1.9.1",
     ],
     tests_require=[
@@ -45,6 +46,7 @@ setup(
             "coverage",
             "pytest-cov",
             "black==22.6",
+            "pre-commit==2.20",
             "twine",
             "numpy",
             "matplotlib",

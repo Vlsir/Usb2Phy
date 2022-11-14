@@ -36,7 +36,7 @@ def ThermoEncoderTb(p: TbParams) -> h.Module:
 
     # Generate and drive VDD
     tb.VDD = h.Signal()
-    tb.vvdd = Vdc(Vdc.Params(dc=p.VDD))(p=tb.VDD, n=tb.VSS)
+    tb.vvdd = Vdc(Vdc.Params(dc=p.VDD, ac=0 * m))(p=tb.VDD, n=tb.VSS)
 
     # Set up the select/ code input
     tb.code = h.Signal(width=p.width)
@@ -44,7 +44,7 @@ def ThermoEncoderTb(p: TbParams) -> h.Module:
     def vbit(i: int):
         """Create a `Vdc` call equal to either `p.VDD` or zero."""
         val = p.VDD if i else 0 * m
-        return Vdc(Vdc.Params(dc=val))
+        return Vdc(Vdc.Params(dc=val, ac=0 * m))
 
     def vcode(code: int) -> None:
         """Closure to drive `tb.code` to the (binary) value of `code`.

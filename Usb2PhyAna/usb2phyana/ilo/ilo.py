@@ -26,7 +26,7 @@ Pbias = Pmos(MosParams(w=1, l=1, m=100))
 
 @h.paramclass
 class IloParams:
-    cl = h.Param(dtype=h.ScalarParam, desc="Capacitance Load", default=10 * f)
+    cl = h.Param(dtype=h.Prefixed, desc="Capacitance Load", default=10 * f)
 
 
 @h.generator

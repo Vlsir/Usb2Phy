@@ -33,7 +33,7 @@ class Pvt:
 class TbParams:
     pvt = h.Param(dtype=Pvt, desc="PVT Conditions", default=Pvt())
     ilo = h.Param(dtype=IloParams, desc="Ilo Generator Parameters", default=IloParams())
-    ib = h.Param(dtype=h.ScalarOption, desc="Bias Current", default=120 * µ)
+    ib = h.Param(dtype=h.Optional[h.Prefixed], desc="Bias Current", default=120 * µ)
     code = h.Param(dtype=int, desc="Fctrl Dac Code", default=16)
 
 
@@ -50,8 +50,8 @@ def IloSharedTb(params: TbParams, name: Optional[str] = None) -> h.Module:
     supplyvals = SupplyVals.corner(params.pvt.v)
     tb.VDDA33 = VDDA33 = h.Signal()
     tb.VDD18 = VDD18 = h.Signal()
-    tb.vvdd18 = Vdc(dc=supplyvals.VDD18)(p=VDD18, n=tb.VSS)
-    tb.vvdd33 = Vdc(dc=supplyvals.VDDA33)(p=VDDA33, n=tb.VSS)
+    tb.vvdd18 = Vdc(dc=supplyvals.VDD18, ac=0 * m)(p=VDD18, n=tb.VSS)
+    tb.vvdd33 = Vdc(dc=supplyvals.VDDA33, ac=0 * m)(p=VDDA33, n=tb.VSS)
 
     # Create the test-bench level delay stage signals
     tb.stg0 = stg0 = h.Diff()

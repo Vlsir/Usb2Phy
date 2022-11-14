@@ -43,7 +43,7 @@ def CmlPulseGenTb(params: TbParams) -> h.Module:
 
     # Create and drive the supply
     tb.VDD = h.Signal()
-    tb.vvdd = Vdc(Vdc.Params(dc=params.pvt.v))(p=tb.VDD, n=tb.VSS)
+    tb.vvdd = Vdc(Vdc.Params(dc=params.pvt.v, ac=0 * m))(p=tb.VDD, n=tb.VSS)
 
     # Input clock generation
     tb.ckg = ckg = Diff()

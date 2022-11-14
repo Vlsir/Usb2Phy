@@ -29,7 +29,7 @@ def PhaseInterpTb(p: TbParams) -> h.Module:
 
     # Generate and drive VDD
     tb.VDD = h.Signal()
-    tb.vvdd = Vdc(Vdc.Params(dc=p.VDD))(p=tb.VDD, n=tb.VSS)
+    tb.vvdd = Vdc(Vdc.Params(dc=p.VDD, ac=0 * m))(p=tb.VDD, n=tb.VSS)
 
     # Set up the select/ code input
     tb.code = h.Signal(width=5)
@@ -37,7 +37,7 @@ def PhaseInterpTb(p: TbParams) -> h.Module:
     def vbit(i: int):
         """Create a `Vdc` call equal to either `p.VDD` or zero."""
         val = p.VDD if i else 0 * m
-        return Vdc(Vdc.Params(dc=val))
+        return Vdc(Vdc.Params(dc=val, ac=0 * m))
 
     def vcode(code: int) -> None:
         """Closure to drive `tb.code` to the (binary) value of `code`.
@@ -61,7 +61,7 @@ def PhaseInterpTb(p: TbParams) -> h.Module:
     # Create the differential output clock
     tb.dck = Diff()
     # And since this version really only drives single ended, drive the negative half to VDD/2
-    tb.vdckn = Vdc(Vdc.Params(dc=p.VDD / 2))(p=tb.dck.n, n=tb.VSS)
+    tb.vdckn = Vdc(Vdc.Params(dc=p.VDD / 2, ac=0 * m))(p=tb.dck.n, n=tb.VSS)
 
     # Finally, create the DUT
     tb.dut = PhaseInterp(nbits=5)(

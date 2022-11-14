@@ -13,7 +13,7 @@ import hdl21 as h
 import hdl21.sim as hs
 from hdl21.pdk import Corner
 from hdl21.sim import Sim, LogSweep, LinearSweep
-from hdl21.prefix import e, m, µ
+from hdl21.prefix import e, m, µ, UNIT
 from hdl21.primitives import MosType, Vdc
 
 # Local Imports
@@ -35,7 +35,7 @@ def test_pdk():
         VSS = h.Port()  # The testbench interface: sole port VSS
 
         VDD = h.Signal()
-        v = Vdc(Vdc.Params(dc=1800 * m))(p=VDD, n=VSS)
+        v = Vdc(Vdc.Params(dc=1800 * m, ac=0 * m))(p=VDD, n=VSS)
 
         inmos = nmos(MosParams())(d=VDD, g=VDD, s=VSS, b=VSS)
         inmos_lvt = nmos_lvt(MosParams())(d=VDD, g=VDD, s=VSS, b=VSS)
@@ -83,8 +83,8 @@ def iv(Dut: MosDut) -> hs.SimResult:
         VSS = h.Port()  # The testbench interface: sole port VSS
 
         dut = Dut.dut(s=VSS, b=VSS)
-        vd = Vdc(Vdc.Params(dc="polarity * vds"))(p=dut.d, n=VSS)
-        vg = Vdc(Vdc.Params(dc="polarity * vgs", ac=1))(p=dut.g, n=VSS)
+        vd = Vdc(Vdc.Params(dc="polarity * vds", ac=0 * m))(p=dut.d, n=VSS)
+        vg = Vdc(Vdc.Params(dc="polarity * vgs", ac=1 * UNIT))(p=dut.g, n=VSS)
 
     sim = Sim(tb=Tb, attrs=s130.install.include(Corner.TYP))
     vgs = sim.param(name="vgs", val=1800 * m)

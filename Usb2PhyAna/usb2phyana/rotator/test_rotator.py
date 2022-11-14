@@ -27,7 +27,7 @@ def rotator_tb() -> h.Module:
 
     tb = h.sim.tb("OneHotRotatorTb")
     tb.VDD = h.Signal()
-    tb.vvdd = Vdc(Vdc.Params(dc=1800 * m))(p=tb.VDD, n=tb.VSS)
+    tb.vvdd = Vdc(Vdc.Params(dc=1800 * m, ac=0 * m))(p=tb.VDD, n=tb.VSS)
 
     # Instantiate the rotator DUT
     tb.dut = OneHotRotator(width=width)(VDD=tb.VDD, VSS=tb.VSS)

@@ -24,7 +24,7 @@ from .tb import Pvt, TbParams, CmlRoFreqTb, sim_input, run_typ
 
 
 # Module-wide reused parameters
-codes = range(0, 32)
+codes = list(range(0, 32))
 cml = CmlParams(rl=25 * K, cl=10 * f, ib=40 * µ)
 
 
@@ -55,7 +55,7 @@ def run_corners(tbgen: h.Generator) -> Result:
 
     # Run conditions one at a time, parallelizing across codes
     for pvt in conditions:
-        print(f"Simulating {pvt}")
+        # (f"Simulating {pvt}")
         condition_results = codesweep(tbgen, pvt)
         result.results.append(condition_results)
 
@@ -100,8 +100,8 @@ def plot(result: Result, title: str, fname: str):
 
         # Check for non-monotonic frequencies
         freq_steps = np.diff(freqs_no_nan)
-        if np.any(freq_steps < 0):
-            print(cond)
+        # if np.any(freq_steps < 0):
+        #     print(cond)
 
         # And plot the results
         label = f"{str(cond.p), str(cond.v.number), str(cond.t)}"

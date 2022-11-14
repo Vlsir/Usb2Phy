@@ -66,7 +66,7 @@ def CmlRoFreqTb(params: TbParams) -> h.Module:
 
     # Generate and drive VDD
     tb.VDD = VDD = h.Signal()
-    tb.vvdd = Vdc(Vdc.Params(dc=params.pvt.v))(p=VDD, n=tb.VSS)
+    tb.vvdd = Vdc(Vdc.Params(dc=params.pvt.v, ac=0 * m))(p=VDD, n=tb.VSS)
 
     # Bias Generation
     # Pmos Side Bias
@@ -164,8 +164,8 @@ class Result:
     # Process, Temperature Conditions
     conditions: List[Pvt]
     # List of bias currents and resistive loads, maintaining swing
-    ibs: List[h.ScalarParam]
-    rls: List[h.ScalarParam]
+    ibs: List[h.Prefixed]
+    rls: List[h.Prefixed]
     # Sim Results, per (P,T), per (ib,rl) Point
     results: List[List[hs.SimResult]]
 

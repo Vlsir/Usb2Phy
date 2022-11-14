@@ -43,7 +43,7 @@ class Pvt:
 @h.paramclass
 class TbParams:
     pvt = h.Param(dtype=Pvt, desc="PVT Conditions", default=Pvt())
-    ib = h.Param(dtype=h.ScalarOption, desc="Bias Current", default=100 * µ)
+    ib = h.Param(dtype=h.Optional[h.Prefixed], desc="Bias Current", default=100 * µ)
 
 
 @h.generator
@@ -57,8 +57,8 @@ def HsTxDriverTb(params: TbParams) -> h.Module:
     supplyvals = SupplyVals.corner(params.pvt.v)
     tb.VDD33 = VDD33 = h.Signal()
     tb.VDD18 = VDD18 = h.Signal()
-    tb.vvdd18 = Vdc(dc=supplyvals.VDD18)(p=VDD18, n=tb.VSS)
-    tb.vvdd33 = Vdc(dc=supplyvals.VDDA33)(p=VDD33, n=tb.VSS)
+    tb.vvdd18 = Vdc(dc=supplyvals.VDD18, ac=0 * m)(p=VDD18, n=tb.VSS)
+    tb.vvdd33 = Vdc(dc=supplyvals.VDDA33, ac=0 * m)(p=VDD33, n=tb.VSS)
 
     # Pads
     tb.pads = pads = h.Diff()

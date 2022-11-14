@@ -45,7 +45,7 @@ class TbParams:
     """Cml Ro Testbench Parameters"""
 
     # Optional
-    ib = h.Param(dtype=h.ScalarParam, desc="Bias Current Value (A)", default=100 * µ)
+    ib = h.Param(dtype=h.Prefixed, desc="Bias Current Value (A)", default=100 * µ)
     pvt = h.Param(dtype=Pvt, desc="PVT Conditions", default=Pvt())
     code = h.Param(dtype=int, desc="DAC Code", default=16)
 
@@ -59,7 +59,7 @@ def IdacSweepTb(params: TbParams) -> h.Module:
 
     # Generate and drive VDD
     tb.VDD = VDD = h.Signal()
-    tb.vvdd = Vdc(Vdc.Params(dc=params.pvt.v))(p=VDD, n=tb.VSS)
+    tb.vvdd = Vdc(Vdc.Params(dc=params.pvt.v, ac=0 * m))(p=VDD, n=tb.VSS)
 
     # Bias Generation
     tb.ibias = ibias = h.Signal()
@@ -73,7 +73,7 @@ def IdacSweepTb(params: TbParams) -> h.Module:
     # Current Output, into a load equal to that in the CML RO
     tb.out, tb.pbias = out, pbias = h.Signals(2)
     tb.pload = Pbias(g=pbias, d=pbias, s=VDD, b=VDD)
-    tb.vout = Vdc(Vdc.Params(dc=0))(p=pbias, n=out)
+    tb.vout = Vdc(Vdc.Params(dc=0, ac=0 * m))(p=pbias, n=out)
 
     # Create the DUT
     tb.dut = Idac()(code=code, out=out, ibias=ibias, VDD=VDD, VSS=tb.VSS)

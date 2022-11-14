@@ -47,7 +47,7 @@ def SlicerTb(p: TbParams) -> h.Module:
     tb = h.sim.tb("SlicerTb")
     # Generate and drive VDD
     tb.VDD = VDD = h.Signal()
-    tb.vvdd = Vdc(Vdc.Params(dc=p.pvt.v))(p=VDD, n=tb.VSS)
+    tb.vvdd = Vdc(Vdc.Params(dc=p.pvt.v, ac=0 * m))(p=VDD, n=tb.VSS)
 
     # Input-driving balun
     tb.inp = Diff()
