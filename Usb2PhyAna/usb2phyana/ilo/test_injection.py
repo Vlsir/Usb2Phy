@@ -22,6 +22,7 @@ from hdl21.primitives import Vdc, Vpulse, Idc, C
 import s130
 import sitepdks as _
 
+from .. import resources
 from ..tests.sim_options import sim_options
 
 # DUT Imports
@@ -106,9 +107,8 @@ def test_ilo_injection():
             simulator lang=spectre
         """
         )
-        i = hs.Include(
-            "/tools/B/dan_fritchman/dev/VlsirWorkspace/Usb2Phy/Usb2PhyAna/resources/scs130lp.sp"
-        )
+        # FIXME! relies on this netlist of logic cells
+        i = hs.Include(resources / "scs130lp.sp")
 
     # Add the PDK dependencies
     IloSim.add(*s130.install.include(params.pvt.p))

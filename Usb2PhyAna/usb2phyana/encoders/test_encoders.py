@@ -17,6 +17,7 @@ from hdl21.prefix import m, n, PICO
 from hdl21.primitives import Vpulse, Vdc
 
 # DUT Imports
+from .. import resources
 from ..tests.sim_options import sim_options
 from .encoders import OneHotEncoder, ThermoEncoder3to8
 
@@ -83,7 +84,9 @@ def sim_thermo_encoder(p: TbParams) -> None:
     sim = Sim(tb=tb, attrs=s130.install.include(Corner.TYP))
     sim.op()
 
-    sim.include("./scs130lp.sp")  # FIXME! relies on this netlist of logic cells
+    sim.include(
+        resources / "scs130lp.sp"
+    )  # FIXME! relies on this netlist of logic cells
     # sim_options.rundir = Path(f"./scratch/code{code}")
     results = sim.run(sim_options)
 

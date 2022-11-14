@@ -23,6 +23,7 @@ import s130
 import sitepdks as _
 
 # Local Imports
+from .. import resources
 from ..tests.sim_options import sim_options
 from ..tests.vcode import Vcode
 from .idac import NmosIdac as Idac, Pbias
@@ -103,9 +104,7 @@ def sim_input(tbgen: h.Generator, params: TbParams) -> hs.Sim:
         )
 
         # FIXME! relies on this netlist of logic cells
-        i = hs.Include(
-            "/tools/B/dan_fritchman/dev/VlsirWorkspace/Usb2Phy/Usb2PhyAna/resources/scs130lp.sp"
-        )
+        i = hs.Include(resources / "scs130lp.sp")
 
     # Add the PDK dependencies
     IdacCodeSweepSim.add(*s130.install.include(params.pvt.p))

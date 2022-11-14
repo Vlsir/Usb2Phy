@@ -17,6 +17,7 @@ from ..tests.supplyvals import SupplyVals
 from ..tests.vcode import Vcode
 
 # DUT Imports
+from .. import resources
 from .ilo import IloInner, IloParams
 
 
@@ -140,9 +141,8 @@ def sim_input(tbgen: h.Generator, params: TbParams) -> hs.Sim:
             simulator lang=spectre
         """
         )
-        i = hs.Include(
-            "/tools/B/dan_fritchman/dev/VlsirWorkspace/Usb2Phy/Usb2PhyAna/resources/scs130lp.sp"
-        )
+        # FIXME! relies on this netlist of logic cells
+        i = hs.Include(resources / "scs130lp.sp")
 
     # Add the PDK dependencies
     IloSim.add(*s130.install.include(params.pvt.p))

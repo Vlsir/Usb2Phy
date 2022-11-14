@@ -10,11 +10,11 @@ import sitepdks as _
 import s130
 import hdl21 as h
 from hdl21.pdk import Corner
-from hdl21.sim import Sim
 from hdl21.prefix import m, n, p, f
 from hdl21.primitives import Vdc, Vpulse, Cap
 
 # DUT Imports
+from .. import resources
 from ..tests.sim_options import sim_options
 from .rotator import OneHotRotator
 
@@ -66,7 +66,8 @@ def test_onehot_rotator():
 
     sim = h.sim.Sim(tb=rotator_tb(), attrs=s130.install.include(Corner.TYP))
     sim.tran(tstop=64 * n, name="THE_TRAN_DUH")
-    sim.include("scs130lp.sp")  # FIXME! relies on this netlist of logic cells
+    # FIXME! relies on this netlist of logic cells
+    sim.include(resources / "scs130lp.sp")
     results = sim.run(sim_options)
 
     print(results)
