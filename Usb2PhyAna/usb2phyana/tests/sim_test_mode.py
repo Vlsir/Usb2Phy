@@ -38,3 +38,6 @@ class SimTest:
     def netlist(self) -> None:
         """Write a netlist for our default-parameterized"""
         return h.netlist(self.default(), dest=io.StringIO())
+
+    def run_mode(self, simtestmode: SimTestMode) -> None:
+        ...

@@ -13,11 +13,12 @@ from hdl21.primitives import Vdc, Idc
 
 # DUT Imports
 from .cmlpi import PhaseInterp
-from .tb import TbParams
+from .tb import TbParams, tdelay
 from ...quadclock import QuadClock
 from ...cmlbuf import CmlBuf
 from ...cmlparams import CmlParams
 from ...tests.quadclockgen import QuadClockGen, QclkParams
+from ...tests.sim_options import sim_options
 
 
 @h.generator
@@ -119,7 +120,12 @@ def test_phase_interp(simtestmode: SimTestMode):
         sim_input(tb=PhaseInterpTb(p), params=p).run()
     else:
         params = [TbParams(code=code) for code in range(32)]
-        # FIXME!:
-        delays = [sim(tb=PhaseInterpTb(p), params=p) for p in params]
-        print(delays)
+
+        # Create the simulation inputs
+        sims = [sim_input(tb=PhaseInterpTb(p), params=p) for p in params]
+
+        # Run sims
+        results = h.sim.run(sims, opts=sim_options)
+
+        delays = [tdelay(r) for r in results]
         save_plot(delays, "CML PI", "cmlpi.png")

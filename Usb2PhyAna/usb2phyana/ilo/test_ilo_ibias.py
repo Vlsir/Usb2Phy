@@ -53,7 +53,7 @@ def run_corners(tbgen: h.Generator) -> Result:
     conditions = [
         Pvt(p, v, t)
         for p in [Corner.TYP, Corner.FAST, Corner.SLOW]
-        for v in [1620 * m, 1800 * m, 1980 * m]
+        for v in [Corner.TYP, Corner.FAST, Corner.SLOW]
         for t in [-25, 25, 75]
     ]
     result = Result(conditions=conditions, ibs=ibs, results=[])
