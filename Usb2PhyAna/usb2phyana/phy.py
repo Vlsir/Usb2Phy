@@ -6,27 +6,10 @@ USB 2.0 Phy Custom / Analog
 import hdl21 as h
 
 # Local Imports
+from .supplies import PhySupplies
 from .hstx import HsTx
 from .hsrx import HsRx
-
-
-@h.module
-class Other:
-    """
-    All the other stuff: squelch etc.
-    Broken out into more Modules as we go.
-    """
-
-    ...  # Empty, for now
-
-
-@h.bundle
-class PhySupplies:
-    """
-    # PHY Supply & Ground Signals
-    """
-
-    VDD18, VDD33, VSS = h.Signals(3)
+from .tx_pll import TxPll
 
 
 @h.bundle
@@ -67,41 +50,13 @@ class AnaDigBundle:
 class FsTx:
     """USB Full-Speed (12Mb) TX"""
 
-    VDD18, VDD33, VSS = h.Ports(3)
+    # IO
+    SUPPLIES = PhySupplies(port=True)
     pd_en, pu_en = h.Inputs(2)
     pads = h.Diff(desc="Differential Pads", port=True, role=h.Diff.Roles.SOURCE)
 
+    # Implementation
     # FIXME: the actual implementation!
-
-
-@h.generator
-def TxPll(_: h.HasNoParams) -> h.Module:
-    @h.module
-    class TxPll:
-        """# Transmit PLL"""
-
-        # IO Interface
-        ## Supplies
-        VDD18, VDD33, VSS = h.Ports(3)
-
-        ## Primary Input & Output Clocks
-        refck = h.Diff(port=True, role=h.Diff.Roles.SINK, desc="Reference Clock")
-        bypck = h.Diff(port=True, role=h.Diff.Roles.SINK, desc="Bypass Clock")
-        txsck = h.Diff(
-            port=True, role=h.Diff.Roles.SOURCE, desc="Output TX Serial Clock"
-        )
-
-        ## Controls
-        en = h.Input(desc="PLL Enable")
-        phase_en = h.Input(desc="Phase Path Enable")
-        bypass = h.Input(desc="PLL Bypass Enable")
-
-        # Implementation
-        ## FIXME!
-        # ilo = Ilo()()
-        # bypass_mux = BypassMux()()
-
-    return TxPll
 
 
 @h.generator
@@ -114,7 +69,8 @@ def Usb2PhyAna(_: h.HasNoParams) -> h.Module:
         """
 
         # IO Interface
-        VDD18, VDD33, VSS = h.Ports(3)
+        SUPPLIES = PhySupplies(port=True)
+
         pads = h.Diff(port=True, role=None, desc="Differential Pads")
         dig_if = AnaDigBundle(port=True, desc="Analog-Digital Interface")
         refck = h.Diff(port=True, role=h.Diff.Roles.SINK, desc="Reference Clock")
@@ -131,15 +87,13 @@ def Usb2PhyAna(_: h.HasNoParams) -> h.Module:
 
         ## Tx PLL
         txpll = TxPll(h.Default)(
-            en=VDD18,  # FIXME!
+            en=SUPPLIES.VDD18,  # FIXME!
             phase_en=dig_if.hstx_pll_phase_en,
             bypass=dig_if.hstx_pll_bypass,
             refck=refck,
             bypck=bypck,
             txsck=hstx_sck,
-            VDD18=VDD18,
-            VDD33=VDD33,
-            VSS=VSS,
+            SUPPLIES=SUPPLIES,
         )
 
         ## High-Speed TX
@@ -147,13 +101,11 @@ def Usb2PhyAna(_: h.HasNoParams) -> h.Module:
             pads=pads,
             sdata=dig_if.hstx_sdata,
             sck=hstx_sck,
-            shunt=VSS,  # FIXME!
-            en=VSS,  # FIXME!
+            shunt=SUPPLIES.VSS,  # FIXME!
+            en=SUPPLIES.VSS,  # FIXME!
             pbias=pbias,
             nbias=nbias,
-            VDD18=VDD18,
-            VDD33=VDD33,
-            VSS=VSS,
+            SUPPLIES=SUPPLIES,
         )
         ## High-Speed RX
         rx = HsRx(h.Default)(
@@ -162,14 +114,22 @@ def Usb2PhyAna(_: h.HasNoParams) -> h.Module:
             sdata=dig_if.hsrx_sdata,
             fctrl=dig_if.hsrx_fctrl,
             cdr_en=dig_if.hsrx_cdr_en,
-            pbias_cdr_120u=VSS,  # FIXME!
-            pbias_preamp_200u=VSS,  # FIXME!
-            VDD18=VDD18,
-            VDD33=VDD33,
-            VSS=VSS,
+            pbias_cdr_120u=SUPPLIES.VSS,  # FIXME!
+            pbias_preamp_200u=SUPPLIES.VSS,  # FIXME!
+            SUPPLIES=SUPPLIES,
         )
         ## All the other stuff: squelch etc.
         ## Broken out into more Modules as we go.
         other = Other()
 
     return Usb2PhyAna
+
+
+@h.module
+class Other:
+    """
+    All the other stuff: squelch etc.
+    Broken out into more Modules as we go.
+    """
+
+    ...  # Empty, for now

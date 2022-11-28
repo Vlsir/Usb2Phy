@@ -11,13 +11,14 @@ from hdl21.primitives import R
 import s130
 from s130 import IoMosParams
 
-Pmos = s130.modules.nmos
-PmosLvt = s130.modules.nmos_lvt
 Pmos = s130.modules.pmos
 PmosV5 = s130.modules.pmos_v5
 NmosV5 = s130.modules.nmos_v5
 Nmos = s130.modules.nmos
 NmosLvt = s130.modules.nmos_lvt
+
+# Local Imports
+from ..supplies import PhySupplies
 
 
 @h.bundle
@@ -147,7 +148,7 @@ def HsTx(_: h.HasNoParams) -> h.Module:
         """
 
         # IO
-        VDD18, VDD33, VSS = h.Ports(3)
+        SUPPLIES = PhySupplies(port=True)
         # io = TxIo(port=True) # FIXME: combined bundle
 
         ## Pad Interface
@@ -166,7 +167,13 @@ def HsTx(_: h.HasNoParams) -> h.Module:
         # Internal Implementation
         ## Enable Level Shifter
         en_3v3 = h.Diff()
-        ls_en = LevelShifter(inp=en, out=en_3v3, VDD18=VDD18, VDD33=VDD33, VSS=VSS)
+        ls_en = LevelShifter(
+            inp=en,
+            out=en_3v3,
+            VDD18=SUPPLIES.VDD18,
+            VDD33=SUPPLIES.VDD33,
+            VSS=SUPPLIES.VSS,
+        )
 
         ## Transmit Logic & Retiming
         predriver_dp, predriver_dn, predriver_shunt = h.Signals(3)
@@ -181,8 +188,8 @@ def HsTx(_: h.HasNoParams) -> h.Module:
             sck=sck,
             en=en,
             out=_predriver_inp,
-            VDD18=VDD18,
-            VSS=VSS,
+            VDD18=SUPPLIES.VDD18,
+            VSS=SUPPLIES.VSS,
         )
 
         ## Pre-Drivers
@@ -191,9 +198,9 @@ def HsTx(_: h.HasNoParams) -> h.Module:
             en_3v3=en_3v3.p,
             datab_1v8=h.Concat(predriver_dp, predriver_dn, predriver_shunt),
             out=h.Concat(driver_dp, driver_dn, driver_shunt),
-            VDD18=VDD18,
-            VDD33=VDD33,
-            VSS=VSS,
+            VDD18=SUPPLIES.VDD18,
+            VDD33=SUPPLIES.VDD33,
+            VSS=SUPPLIES.VSS,
         )
 
         ## Output Driver
@@ -207,9 +214,9 @@ def HsTx(_: h.HasNoParams) -> h.Module:
             inp=_driver_inp,
             pads=pads,
             pbias=pbias,
-            VDD18=VDD18,
-            VDD33=VDD33,
-            VSS=VSS,
+            VDD18=SUPPLIES.VDD18,
+            VDD33=SUPPLIES.VDD33,
+            VSS=SUPPLIES.VSS,
         )
 
     return HsTx

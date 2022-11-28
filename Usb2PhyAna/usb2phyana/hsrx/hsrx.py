@@ -9,6 +9,7 @@ import hdl21 as h
 from .preamp import PreAmp
 from .slicer import Slicer
 from ..ilo import Ilo
+from ..supplies import PhySupplies
 
 
 @h.generator
@@ -22,7 +23,7 @@ def Cdr(_: h.HasNoParams) -> h.Module:
 
         # IO Interface
         ## Supplies
-        VDD18, VDD33, VSS = h.Ports(3)
+        SUPPLIES = PhySupplies(port=True)
 
         ## Primary IO
         data = h.Diff(port=True, role=h.Diff.Roles.SINK, desc="RX Data")
@@ -32,13 +33,13 @@ def Cdr(_: h.HasNoParams) -> h.Module:
         pbias = h.Input()
 
         # Implementation
-        ## FIXME!
         inj = h.Signal()
+        ## FIXME! add the pulse generation
         # pulse_gen = DataPulseGen()(data=data)
-        ilo = Ilo(Ilo.Params())(  # FIXME!
-            VDDA33=VDD33,
-            VDD18=VDD18,
-            VSS=VSS,
+        ilo = Ilo(h.Default)(
+            VDDA33=SUPPLIES.VDD33,
+            VDD18=SUPPLIES.VDD18,
+            VSS=SUPPLIES.VSS,
             inj=inj,
             pbias=pbias,
             fctrl=fctrl,
@@ -55,14 +56,10 @@ def HsRx(_: h.HasNoParams) -> h.Module:
         """# High-Speed Receiver"""
 
         # IO
-        # io = RxIo(port=True) # FIXME: combined bundle
-
         ## Supplies
-        VDD18, VDD33, VSS = h.Ports(3)
+        SUPPLIES = PhySupplies(port=True)
         ## Pad Interface
-        pads = h.Diff(
-            desc="Differential Receive Pads", port=True, role=h.Diff.Roles.SINK
-        )
+        pads = h.Diff(desc="RX Pads", port=True, role=h.Diff.Roles.SINK)
         ## Bias Inputs
         pbias_cdr_120u, pbias_preamp_200u = h.Inputs(2)
 
@@ -73,10 +70,10 @@ def HsRx(_: h.HasNoParams) -> h.Module:
         cdr_en = h.Input(desc="RX CDR Enable")
 
         # Internal Implementation
-
         ## Pre-Amp
-        preamp = PreAmp(inp=pads, pbias=pbias_preamp_200u, VDD33=VDD33, VSS=VSS)
-
+        preamp = PreAmp(
+            inp=pads, pbias=pbias_preamp_200u, VDD33=SUPPLIES.VDD33, VSS=SUPPLIES.VSS
+        )
         ## Clock Recovery
         cdr = Cdr()(
             sck=sck,
@@ -84,19 +81,17 @@ def HsRx(_: h.HasNoParams) -> h.Module:
             cdr_en=cdr_en,
             data=preamp.out,
             pbias=pbias_cdr_120u,
-            VDD33=VDD33,
-            VDD18=VDD18,
-            VSS=VSS,
+            SUPPLIES=SUPPLIES,
         )
-
         ## Slicer
+        # FIXME: eventually `sdata_n` here will be able to be a `NoConn`
         sdata_n = h.Signal()
         slicer = Slicer(
             inp=preamp.out,
             clk=sck,
-            out=h.AnonymousBundle(p=sdata, n=sdata_n),  # FIXME: enable `NoConn` here
-            VDD18=VDD18,
-            VSS=VSS,
+            out=h.AnonymousBundle(p=sdata, n=sdata_n),
+            VDD18=SUPPLIES.VDD18,
+            VSS=SUPPLIES.VSS,
         )
 
     return HsRx
