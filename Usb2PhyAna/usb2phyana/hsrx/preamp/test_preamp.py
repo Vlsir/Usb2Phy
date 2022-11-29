@@ -92,7 +92,7 @@ def PreAmpTb(p: TbParams) -> h.Module:
     )  # *Sinks* a current equal to `p.ib`.
 
     # Create the Pre-Amp DUT
-    tb.dut = PreAmp(
+    tb.dut = PreAmp(h.Default)(
         inp=tb.inp,
         out=tb.out,
         pbias=ibias,

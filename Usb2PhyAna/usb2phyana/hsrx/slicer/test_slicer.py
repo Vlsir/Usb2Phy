@@ -78,7 +78,7 @@ def SlicerTb(p: TbParams) -> h.Module:
     tb.cln = Cload(p=tb.out.n, n=tb.VSS)
 
     # Create the Slicer DUT
-    tb.dut = Slicer(
+    tb.dut = Slicer(h.Default)(
         inp=tb.inp,
         out=tb.out,
         clk=clk,

@@ -7,6 +7,7 @@ from enum import Enum, auto
 
 # Hdl & PDK Imports
 import hdl21 as h
+from hdl21 import Diff
 from hdl21.prefix import K, f, µ
 from hdl21.primitives import Idc
 import s130
@@ -22,7 +23,6 @@ Nbias = NmosLvt(MosParams(w=1, l=1, m=100))
 
 # Local Imports
 from ...quadclock import QuadClock
-from ...diff import Diff
 from ...logiccells import Inv
 from ...cmlparams import CmlParams
 from .encoder import PiEncoder

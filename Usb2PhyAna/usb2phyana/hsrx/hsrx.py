@@ -14,12 +14,13 @@ from ..supplies import PhySupplies
 
 @h.generator
 def Cdr(_: h.HasNoParams) -> h.Module:
+    """
+    # Clock & Data Recovery
+    Analog / Custom Portion
+    """
+
     @h.module
     class Cdr:
-        """
-        # Clock & Data Recovery
-        Analog / Custom Portion
-        """
 
         # IO Interface
         ## Supplies
@@ -37,13 +38,11 @@ def Cdr(_: h.HasNoParams) -> h.Module:
         ## FIXME! add the pulse generation
         # pulse_gen = DataPulseGen()(data=data)
         ilo = Ilo(h.Default)(
-            VDDA33=SUPPLIES.VDD33,
-            VDD18=SUPPLIES.VDD18,
-            VSS=SUPPLIES.VSS,
             inj=inj,
             pbias=pbias,
             fctrl=fctrl,
             sck=sck,
+            SUPPLIES=SUPPLIES,
         )
 
     return Cdr
@@ -51,9 +50,10 @@ def Cdr(_: h.HasNoParams) -> h.Module:
 
 @h.generator
 def HsRx(_: h.HasNoParams) -> h.Module:
+    """# High-Speed Receiver"""
+
     @h.module
     class HsRx:
-        """# High-Speed Receiver"""
 
         # IO
         ## Supplies
@@ -71,11 +71,11 @@ def HsRx(_: h.HasNoParams) -> h.Module:
 
         # Internal Implementation
         ## Pre-Amp
-        preamp = PreAmp(
+        preamp = PreAmp(h.Default)(
             inp=pads, pbias=pbias_preamp_200u, VDD33=SUPPLIES.VDD33, VSS=SUPPLIES.VSS
         )
         ## Clock Recovery
-        cdr = Cdr()(
+        cdr = Cdr(h.Default)(
             sck=sck,
             fctrl=fctrl,
             cdr_en=cdr_en,
@@ -86,10 +86,10 @@ def HsRx(_: h.HasNoParams) -> h.Module:
         ## Slicer
         # FIXME: eventually `sdata_n` here will be able to be a `NoConn`
         sdata_n = h.Signal()
-        slicer = Slicer(
+        slicer = Slicer(h.Default)(
             inp=preamp.out,
             clk=sck,
-            out=h.AnonymousBundle(p=sdata, n=sdata_n),
+            out=h.bundlize(p=sdata, n=sdata_n),
             VDD18=SUPPLIES.VDD18,
             VSS=SUPPLIES.VSS,
         )

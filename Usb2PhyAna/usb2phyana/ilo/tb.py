@@ -41,7 +41,7 @@ class TbParams:
 def IloSharedTb(params: TbParams, name: Optional[str] = None) -> h.Module:
     """
     # Shared Portions of Ilo Testbenches
-    Note this is *not* an Hdl21 Generator, on purpose.
+    Note this is *not* an Hdl21 Generator, on purpose, as callers will generally "start from" it and add their own content.
     """
 
     # Create our testbench
@@ -83,9 +83,11 @@ def IloSharedTb(params: TbParams, name: Optional[str] = None) -> h.Module:
         stg1=stg1,
         stg2=stg2,
         stg3=stg3,
-        VDDA33=VDDA33,
-        VDD18=VDD18,
-        VSS=tb.VSS,
+        SUPPLIES=h.bundlize(
+            VDD33=VDDA33,
+            VDD18=VDD18,
+            VSS=tb.VSS,
+        ),
     )
     return tb
 

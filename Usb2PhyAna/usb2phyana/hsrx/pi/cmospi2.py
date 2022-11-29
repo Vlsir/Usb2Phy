@@ -7,11 +7,11 @@ CMOS edition, with I/Q MSB muxes and control paired with `pi.PiEncoder`.
 # Hdl & PDK Imports
 import hdl21 as h
 from hdl21.prefix import f
+from hdl21 import Diff
 
 Cap = h.primitives.Cap
 
 # Local Imports
-from ...diff import Diff
 from ...quadclock import QuadClock
 from .encoder import PiEncoder
 from ...triinv import TriInv

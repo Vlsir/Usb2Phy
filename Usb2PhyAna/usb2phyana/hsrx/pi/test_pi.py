@@ -7,6 +7,7 @@ import io
 
 # Hdl & PDK Imports
 import hdl21 as h
+from hdl21 import Diff
 from hdl21.prefix import m, n, PICO
 from hdl21.primitives import Vdc
 
@@ -14,7 +15,6 @@ from hdl21.primitives import Vdc
 from . import PhaseInterp
 from .tb import TbParams, tdelay
 from ...quadclock import QuadClock
-from ...diff import Diff
 from ...tests.quadclockgen import QuadClockGen, QclkParams
 from ...tests.sim_options import sim_options
 

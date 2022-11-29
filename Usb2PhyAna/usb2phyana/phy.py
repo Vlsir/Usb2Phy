@@ -2,10 +2,12 @@
 USB 2.0 Phy Custom / Analog
 """
 
+
 # Hdl & PDK Imports
 import hdl21 as h
 
 # Local Imports
+from .phyroles import PhyRoles
 from .supplies import PhySupplies
 from .hstx import HsTx
 from .hsrx import HsRx
@@ -21,6 +23,8 @@ class AnaDigBundle:
     Note all port-directions are from the perspective of `Usb2PhyAna`, the analog portion of the PHY.
     The digital half is not implemented with `hdl21.Bundle` and hence is never instantiated.
     """
+
+    Roles = PhyRoles # Set the shared PHY Roles
 
     hstx_sck = h.Output(width=1, desc="High-Speed TX *Output* Serial TX Clock")
     hstx_sdata = h.Input(width=1, desc="High-Speed TX Data")
@@ -46,56 +50,45 @@ class AnaDigBundle:
     # FIXME: organize these into sub-bundles
 
 
-@h.module
-class FsTx:
-    """USB Full-Speed (12Mb) TX"""
-
-    # IO
-    SUPPLIES = PhySupplies(port=True)
-    pd_en, pu_en = h.Inputs(2)
-    pads = h.Diff(desc="Differential Pads", port=True, role=h.Diff.Roles.SOURCE)
-
-    # Implementation
-    # FIXME: the actual implementation!
-
-
 @h.generator
 def Usb2PhyAna(_: h.HasNoParams) -> h.Module:
+    """
+    # USB 2 PHY, Custom / Analog Portion
+    Top-level module and primary export of this package.
+    """
+
     @h.module
     class Usb2PhyAna:
-        """
-        # USB 2 PHY, Custom / Analog Portion
-        Top-level module and primary export of this package.
-        """
-
         # IO Interface
         SUPPLIES = PhySupplies(port=True)
-
         pads = h.Diff(port=True, role=None, desc="Differential Pads")
         dig_if = AnaDigBundle(port=True, desc="Analog-Digital Interface")
         refck = h.Diff(port=True, role=h.Diff.Roles.SINK, desc="Reference Clock")
         bypck = h.Diff(port=True, role=h.Diff.Roles.SINK, desc="TX PLL Bypass Clock")
 
         # Implementation
-        # FIXME: feeds into dig_if
-        hstx_sck = h.Diff(desc="TX Serial Clock", port=False, role=None)
-        hsrx_sck = h.Diff(desc="RX Serial Clock", port=False, role=None)
-
+        ## Differential versions and negative legs of the clocks
+        ## exposed to the digital half of the PHY single-ended-ly.
+        hstx_serial_clock_n = h.Signal(desc="TX Serial Clock, negative leg")
+        hstx_sck = h.bundlize(
+            p=dig_if.hstx_sck,
+            n=hstx_serial_clock_n,
+        )
         ## Bias Signals
         ## FIXME: add a bias block and generate these!
         pbias, nbias = h.Signals(2)
 
         ## Tx PLL
         txpll = TxPll(h.Default)(
-            en=SUPPLIES.VDD18,  # FIXME!
+            en=dig_if.hstx_pll_en,
             phase_en=dig_if.hstx_pll_phase_en,
             bypass=dig_if.hstx_pll_bypass,
             refck=refck,
             bypck=bypck,
             txsck=hstx_sck,
+            fctrl=dig_if.hstx_pll_fctrl,
             SUPPLIES=SUPPLIES,
         )
-
         ## High-Speed TX
         tx = HsTx(h.Default)(
             pads=pads,
@@ -123,6 +116,19 @@ def Usb2PhyAna(_: h.HasNoParams) -> h.Module:
         other = Other()
 
     return Usb2PhyAna
+
+
+@h.module
+class FsTx:
+    """USB Full-Speed (12Mb) TX"""
+
+    # IO
+    SUPPLIES = PhySupplies(port=True)
+    pd_en, pu_en = h.Inputs(2)
+    pads = h.Diff(desc="Differential Pads", port=True, role=h.Diff.Roles.SOURCE)
+
+    # Implementation
+    # FIXME: the actual implementation!
 
 
 @h.module

@@ -14,6 +14,7 @@ from s130 import MosParams
 # Local Imports
 from ..idac.pmos_cascode_idac import PmosIdac
 from ..width import Width
+from ..supplies import PhySupplies
 
 
 PmosHvt = s130.modules.pmos_hvt
@@ -63,16 +64,10 @@ def IloStage(params: IloParams) -> h.Module:
         # Internal Implementation
         ## Forward Inverters
         fwd = Pair(IloInv(width=16))(i=inp, o=out, VDD=VDD, VSS=VSS)
-        # fwdp = IloInv(width=16)(i=inp.p, o=out.n, VDD=VDD, VSS=VSS)
-        # fwdn = IloInv(width=16)(i=inp.n, o=out.p, VDD=VDD, VSS=VSS)
         ## Cross-Coupled Output Inverters
         cross = Pair(IloInv(width=4))(i=out, o=inverse(out), VDD=VDD, VSS=VSS)
-        # crossp = IloInv(width=4)(i=out.p, o=out.n, VDD=VDD, VSS=VSS)
-        # crossn = IloInv(width=4)(i=out.n, o=out.p, VDD=VDD, VSS=VSS)
         ## Load Caps
         cl = Pair(C(c=params.cl))(p=out, n=VSS)
-        # clp = C(C.Params(c=params.cl))(p=out.p, n=VSS)
-        # cln = C(C.Params(c=params.cl))(p=out.n, n=VSS)
 
     return IloStage
 
@@ -123,7 +118,7 @@ def IloInner(params: IloParams) -> h.Module:
     @h.module
     class IloInner:
         # IO
-        VDDA33, VDD18, VSS = h.Ports(3)
+        SUPPLIES = PhySupplies(port=True)
         inj = h.Input()
         pbias = h.Input()
         fctrl = h.Input(width=5)
@@ -139,12 +134,23 @@ def IloInner(params: IloParams) -> h.Module:
 
         ## Frequency-Control Current Dac
         idac = PmosIdac()(
-            ibias=pbias, code=fctrl, out=ring_top, VDDA33=VDDA33, VDD18=VDD18, VSS=VSS
+            ibias=pbias,
+            code=fctrl,
+            out=ring_top,
+            VDDA33=SUPPLIES.VDD33,
+            VDD18=SUPPLIES.VDD18,
+            VSS=SUPPLIES.VSS,
         )
 
         ## Core Ring
         ring = IloRing(params)(
-            inj=inj, stg0=stg0, stg1=stg1, stg2=stg2, stg3=stg3, VDD=ring_top, VSS=VSS
+            inj=inj,
+            stg0=stg0,
+            stg1=stg1,
+            stg2=stg2,
+            stg3=stg3,
+            VDD=ring_top,
+            VSS=SUPPLIES.VSS,
         )
 
     return IloInner
@@ -157,7 +163,7 @@ def Ilo(params: IloParams) -> h.Module:
     @h.module
     class Ilo:
         # IO
-        VDDA33, VDD18, VSS = h.Ports(3)
+        SUPPLIES = PhySupplies(port=True)
         inj = h.Input()
         pbias = h.Input()
         fctrl = h.Input(width=5)
@@ -178,9 +184,7 @@ def Ilo(params: IloParams) -> h.Module:
             stg1=stg1,
             stg2=stg2,
             stg3=stg3,
-            VDDA33=VDDA33,
-            VDD18=VDD18,
-            VSS=VSS,
+            SUPPLIES=SUPPLIES,
         )
 
     return Ilo

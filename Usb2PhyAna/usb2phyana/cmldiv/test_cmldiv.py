@@ -9,6 +9,7 @@ import io
 import sitepdks as _
 import s130
 import hdl21 as h
+from hdl21 import Diff
 from hdl21.pdk import Corner
 from hdl21.sim import Sim
 from hdl21.prefix import m, p, n, K, f, µ
@@ -17,7 +18,6 @@ from hdl21.primitives import Vdc, Idc
 # DUT Imports
 from .cmldiv import CmlDiv, CmlParams
 from ..cmlbuf import CmlBuf
-from ..diff import Diff
 from ..tests.diffclockgen import DiffClkGen, DiffClkParams
 from ..tests.sim_options import sim_options
 
