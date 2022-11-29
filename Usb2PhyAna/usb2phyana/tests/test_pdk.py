@@ -1,4 +1,5 @@
-import io
+import io, copy
+from pathlib import Path
 from dataclasses import dataclass
 
 # PyPi Imports
@@ -60,10 +61,6 @@ class MosDut:
     mostype: MosType
 
 
-import pytest
-
-
-@pytest.mark.xfail(reason="https://github.com/dan-fritchman/Hdl21/issues/64")
 def test_iv():
     """I-V Curve Test"""
 
@@ -109,6 +106,7 @@ def iv(Dut: MosDut) -> hs.SimResult:
 
 
 def postprocess(dut: MosDut, result: hs.SimResult) -> None:
+    """Post-process and plot results from an `iv()` run on `dut`."""
     result = result.an[0]  # Get the DC sweep
     print(result.measurements)
 

@@ -2,7 +2,7 @@
 # High-Speed TX Tests
 """
 
-import pickle, os, pytest
+import sys, pickle, os, pytest
 from typing import List, Tuple, Optional
 from dataclasses import asdict
 from copy import copy
@@ -94,12 +94,12 @@ def HsTxDriverTb(params: TbParams) -> h.Module:
     ## High-Speed TX DUT
     tb.dut = HsTxDriver(h.Default)(
         pads=pads,
-        # hstx_enb_3v3=tb.VSS,
-        dp_b=tb.dp_b,
-        dn_b=tb.dn_b,
-        shunt_b=tb.VDD18,
+        inp=h.bundlize(
+            dp=tb.dp_b,
+            dn=tb.dn_b,
+            shunt=tb.VDD18,
+        ),
         pbias=pbias,
-        VDD18=VDD18,
         VDD33=VDD33,
         VSS=tb.VSS,
     )
@@ -107,9 +107,18 @@ def HsTxDriverTb(params: TbParams) -> h.Module:
     return tb
 
 
-@pytest.mark.xfail(reason="IO interface change WIP")
-def test_hstx_driver():
-    """High Speed TX Tests"""
+from ...tests.sim_test_mode import SimTestMode
+
+
+def test_hstx_driver(simtestmode: SimTestMode):
+    if simtestmode == SimTestMode.NETLIST:
+        h.netlist(HsTxDriver(), sys.stdout)
+    else:  # All other states run just one sim for now
+        sim_hstx_driver()
+
+
+def sim_hstx_driver():
+    """High Speed TX Driver Tests"""
 
     params = TbParams(pvt=Pvt(p=Corner.SLOW, v=Corner.SLOW, t=-25))
 
@@ -129,11 +138,6 @@ def test_hstx_driver():
     print(results)
 
 
-@pytest.mark.xfail(reason="IO interface change WIP")
-def test_elaboration():
-    h.elaborate(HsTx())
-
-
-@pytest.mark.xfail(reason="IO interface change WIP")
-def test_netlist():
+def test_hstx(simtestmode: SimTestMode):
+    # FIXME: simulation-based tests; thus far just netlisting
     h.netlist(HsTx(), sys.stdout)

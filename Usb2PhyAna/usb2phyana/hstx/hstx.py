@@ -84,7 +84,7 @@ def HsTxDriver(_: h.HasNoParams) -> h.Module:
     m = h.Module()
 
     # IO
-    m.VDD18, m.VDD33, m.VSS = h.Ports(3)
+    m.VDD33, m.VSS = h.Ports(2)
     m.pads = Diff(port=True, role=Diff.Roles.SOURCE, desc="Differential Output Pads")
     m.inp = TxTriplet(port=True, role=TxTriplet.Roles.SINK)
     m.pbias = h.Input(desc="100µA Pmos Bias Current")
@@ -124,12 +124,16 @@ class HsTxDig:
 
 @h.generator
 def HsTx(_: h.HasNoParams) -> h.Module:
+    """
+    # High-Speed TX
+    """
+
     @h.module
     class LevelShifter:
         """Logic Level Shifter, 1.8V to 3.3V"""
 
         # IO
-        VDD18, VDD33, VSS = h.Ports(3)
+        SUPPLIES = PhySupplies(port=True, role=PhyRoles.PHY, desc="Supplies")
         inp = h.Input()
         out = h.Diff(port=True)
 
@@ -148,13 +152,10 @@ def HsTx(_: h.HasNoParams) -> h.Module:
         # Internal Implementation
         ## FIXME: how much simple logic to include,
         ## e.g. the requirement that enable be exclusive with dp, dn, and shunt.
+        # FIXME: need to add a driver for the single-ended `sck` output.
 
     @h.module
     class HsTx:
-        """
-        # High-Speed TX
-        """
-
         # IO
         SUPPLIES = PhySupplies(port=True, role=PhyRoles.PHY, desc="Supplies")
         pads = Diff(port=True, role=Diff.Roles.SOURCE, desc="Transmit Pads")
@@ -162,56 +163,41 @@ def HsTx(_: h.HasNoParams) -> h.Module:
         dig = HsTxDig(port=True, role=PhyRoles.PHY, desc="Digital IO")
         bias = HsTxBias(port=True, role=PhyRoles.PHY, desc="Bias Inputs")
 
-        # FIXME: need to add a driver for the single-ended `sck` output.
-
         # Implementation
         ## Enable Level Shifter
         en_3v3 = h.Diff()
         ls_en = LevelShifter(
             inp=dig.en,
             out=en_3v3,
-            VDD18=SUPPLIES.VDD18,
-            VDD33=SUPPLIES.VDD33,
-            VSS=SUPPLIES.VSS,
+            SUPPLIES=SUPPLIES,
         )
+        ## The two internal (dp, dn, shunt) triplets:
+        ## one from logic to pre-driver, and one from pre to output driver.
+        predriver_inp = TxTriplet()
+        driver_inp = TxTriplet()
 
         ## Transmit Logic & Retiming
-        predriver_dp, predriver_dn, predriver_shunt = h.Signals(3)
-        _predriver_inp = h.AnonymousBundle(
-            # FIXME: this concatenating BundleRefs gonna work any minute now!!
-            dp=predriver_dp,
-            dn=predriver_dn,
-            shunt=predriver_shunt,
-        )
         logic = HsTxLogic(
             core_if=dig,
-            out=_predriver_inp,
+            out=predriver_inp,
             VDD18=SUPPLIES.VDD18,
             VSS=SUPPLIES.VSS,
         )
-
         ## Pre-Drivers
-        driver_dp, driver_dn, driver_shunt = h.Signals(3)
+        ## An array of 3 single-ended drivers. Line up the signals of each `Triplet`.
         predrivers = 3 * CmosPreDriver()(
             en_3v3=en_3v3.p,
-            datab_1v8=h.Concat(predriver_dp, predriver_dn, predriver_shunt),
-            out=h.Concat(driver_dp, driver_dn, driver_shunt),
+            datab_1v8=h.Concat(predriver_inp.dp, predriver_inp.dn, predriver_inp.shunt),
+            out=h.Concat(driver_inp.dp, driver_inp.dn, driver_inp.shunt),
             VDD18=SUPPLIES.VDD18,
             VDD33=SUPPLIES.VDD33,
             VSS=SUPPLIES.VSS,
         )
         ## Output Driver
-        _driver_inp = h.AnonymousBundle(
-            # FIXME: this concatenating BundleRefs gonna work any minute now!!
-            dp=driver_dp,
-            dn=driver_dn,
-            shunt=driver_shunt,
-        )
         driver = HsTxDriver(h.Default)(
-            inp=_driver_inp,
+            inp=driver_inp,
             pads=pads,
             pbias=bias.pbias,
-            VDD18=SUPPLIES.VDD18,
             VDD33=SUPPLIES.VDD33,
             VSS=SUPPLIES.VSS,
         )
