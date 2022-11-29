@@ -1,7 +1,7 @@
 """ 
-USB 2.0 Phy Custom / Analog
+# USB 2.0 Phy 
+## Custom / Analog Top-Level
 """
-
 
 # Hdl & PDK Imports
 import hdl21 as h
@@ -9,9 +9,9 @@ import hdl21 as h
 # Local Imports
 from .phyroles import PhyRoles
 from .supplies import PhySupplies
-from .hstx import HsTx
-from .hsrx import HsRx
-from .tx_pll import TxPll
+from .hstx import HsTx, HsTxDig, HsTxBias
+from .hsrx import HsRx, HsRxDig, HsRxBias
+from .tx_pll import TxPll, TxPllCtrl, TxPllBias
 
 
 @h.bundle
@@ -24,30 +24,27 @@ class AnaDigBundle:
     The digital half is not implemented with `hdl21.Bundle` and hence is never instantiated.
     """
 
-    Roles = PhyRoles # Set the shared PHY Roles
+    Roles = PhyRoles  # Set the shared PHY Roles
 
-    hstx_sck = h.Output(width=1, desc="High-Speed TX *Output* Serial TX Clock")
-    hstx_sdata = h.Input(width=1, desc="High-Speed TX Data")
-    hstx_shunt = h.Input(width=1, desc="High-Speed TX Shunt Drive Current")
-    hstx_en = h.Input(width=1, desc="High-Speed TX Output Enable")
+    # Sub-Block Interfaces
+    hstx = HsTxDig(desc="High-Speed TX Digital IO")
+    hsrx = HsRxDig(desc="High-Speed RX Digital IO Bundle")
+    txpll = TxPllCtrl(desc="High-Speed TX PLL Control")
 
-    hstx_pll_fctrl = h.Input(width=5, desc="TX Frequency Control Code")
-    hstx_pll_en = h.Input(desc="TX PLL Enable")
-    hstx_pll_phase_en = h.Input(desc="TX PLL Phase-Path Enable")
-    hstx_pll_bypass = h.Input(desc="Bypass TX PLL")
-
-    hsrx_sck = h.Output(width=1, desc="*Output* RX Recovered Clock")
-    hsrx_sdata = h.Output(width=1, desc="Serial RX Data")
-    hsrx_fctrl = h.Input(width=5, desc="RX Frequency Control Code")
-    hsrx_cdr_en = h.Input(desc="RX CDR Enable")
-
+    # Other/ Misc Signals
     squelch = h.Output(width=1, desc="Squelch Detector Output")
     fstx_pd_en = h.Input(desc="Full-speed pull-down enable")
     fstx_pu_en = h.Input(desc="Full-speed pull-up enable")
     fsrx_diff = h.Output(desc="Differential Full-Speed RX")
     fsrx_linestate_p, fsrx_linestate_n = h.Outputs(2, desc="Single Ended Line State")
 
-    # FIXME: organize these into sub-bundles
+
+@h.bundle
+class PhyBias:
+    """# Phy-Level Bias Input(s)"""
+
+    Roles = PhyRoles  # Set the shared PHY Roles
+    ibias = h.Signal()  # FIXME: detail this
 
 
 @h.generator
@@ -60,62 +57,56 @@ def Usb2PhyAna(_: h.HasNoParams) -> h.Module:
     @h.module
     class Usb2PhyAna:
         # IO Interface
-        SUPPLIES = PhySupplies(port=True)
+        SUPPLIES = PhySupplies(port=True, role=PhyRoles.PHY, desc="Supplies")
         pads = h.Diff(port=True, role=None, desc="Differential Pads")
         dig_if = AnaDigBundle(port=True, desc="Analog-Digital Interface")
         refck = h.Diff(port=True, role=h.Diff.Roles.SINK, desc="Reference Clock")
         bypck = h.Diff(port=True, role=h.Diff.Roles.SINK, desc="TX PLL Bypass Clock")
+        bias = PhyBias(port=True, role=PhyRoles.PHY, desc="Phy Bias Input(s)")
 
         # Implementation
-        ## Differential versions and negative legs of the clocks
-        ## exposed to the digital half of the PHY single-ended-ly.
-        hstx_serial_clock_n = h.Signal(desc="TX Serial Clock, negative leg")
-        hstx_sck = h.bundlize(
-            p=dig_if.hstx_sck,
-            n=hstx_serial_clock_n,
-        )
-        ## Bias Signals
-        ## FIXME: add a bias block and generate these!
-        pbias, nbias = h.Signals(2)
-
+        ## Bias Distribution
+        biasdist = BiasDist(phy=bias, SUPPLIES=SUPPLIES)
         ## Tx PLL
         txpll = TxPll(h.Default)(
-            en=dig_if.hstx_pll_en,
-            phase_en=dig_if.hstx_pll_phase_en,
-            bypass=dig_if.hstx_pll_bypass,
-            refck=refck,
+            refck=refck,  # Clocks
             bypck=bypck,
-            txsck=hstx_sck,
-            fctrl=dig_if.hstx_pll_fctrl,
-            SUPPLIES=SUPPLIES,
+            ctrl=dig_if.txpll,  # Control Interface
+            bias=biasdist.txpll,  # Bias
+            SUPPLIES=SUPPLIES,  # Supplies
         )
         ## High-Speed TX
         tx = HsTx(h.Default)(
-            pads=pads,
-            sdata=dig_if.hstx_sdata,
-            sck=hstx_sck,
-            shunt=SUPPLIES.VSS,  # FIXME!
-            en=SUPPLIES.VSS,  # FIXME!
-            pbias=pbias,
-            nbias=nbias,
-            SUPPLIES=SUPPLIES,
+            pads=pads,  # Pads
+            pllsck=txpll.txsck,  # TxPll Output Clock
+            dig=dig_if.hstx,  # Digital Interface
+            bias=biasdist.hstx,  # Bias
+            SUPPLIES=SUPPLIES,  # Supplies
         )
         ## High-Speed RX
         rx = HsRx(h.Default)(
-            pads=pads,
-            sck=dig_if.hsrx_sck,
-            sdata=dig_if.hsrx_sdata,
-            fctrl=dig_if.hsrx_fctrl,
-            cdr_en=dig_if.hsrx_cdr_en,
-            pbias_cdr_120u=SUPPLIES.VSS,  # FIXME!
-            pbias_preamp_200u=SUPPLIES.VSS,  # FIXME!
-            SUPPLIES=SUPPLIES,
+            pads=pads,  # Pads
+            dig=dig_if.hsrx,  # Digital Interface
+            bias=biasdist.hsrx,  # Bias
+            SUPPLIES=SUPPLIES,  # Supplies
         )
-        ## All the other stuff: squelch etc.
-        ## Broken out into more Modules as we go.
-        other = Other()
 
     return Usb2PhyAna
+
+
+@h.module
+class BiasDist:
+    """Bias Distribution"""
+
+    # IO
+    SUPPLIES = PhySupplies(port=True, role=PhyRoles.PHY, desc="Supplies")
+    phy = PhyBias(port=True, desc="Phy Bias Input(s)")
+    txpll = TxPllBias(port=True, desc="Tx Pll Bias")
+    hsrx = HsRxBias(port=True, desc="Hs Rx Bias")
+    hstx = HsTxBias(port=True, desc="Hs Tx Bias")
+
+    # Implementation
+    # FIXME: the actual implementation!
 
 
 @h.module
@@ -123,19 +114,10 @@ class FsTx:
     """USB Full-Speed (12Mb) TX"""
 
     # IO
-    SUPPLIES = PhySupplies(port=True)
+    SUPPLIES = PhySupplies(port=True, role=PhyRoles.PHY, desc="Supplies")
     pd_en, pu_en = h.Inputs(2)
     pads = h.Diff(desc="Differential Pads", port=True, role=h.Diff.Roles.SOURCE)
 
     # Implementation
     # FIXME: the actual implementation!
 
-
-@h.module
-class Other:
-    """
-    All the other stuff: squelch etc.
-    Broken out into more Modules as we go.
-    """
-
-    ...  # Empty, for now

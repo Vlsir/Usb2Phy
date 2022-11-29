@@ -7,7 +7,7 @@ from enum import Enum, auto
 # Hdl & PDK Imports
 import hdl21 as h
 from hdl21 import Diff
-from hdl21.primitives import R
+
 import s130
 from s130 import IoMosParams
 
@@ -19,6 +19,7 @@ NmosLvt = s130.modules.nmos_lvt
 
 # Local Imports
 from ..supplies import PhySupplies
+from ..phyroles import PhyRoles
 
 
 @h.bundle
@@ -102,13 +103,23 @@ def HsTxDriver(_: h.HasNoParams) -> h.Module:
     return m
 
 
-# @h.bundle
-# class TxIo:
-#     """Transmit Lane IO"""
+@h.bundle
+class HsTxBias:
+    """# High-Speed TX Bias Bundle"""
 
-#     pads = Diff(desc="Differential Transmit Pads", role=Diff.Roles.SOURCE)
-#     data = TxData(desc="Data IO from Core")
-#     cfg = TxConfig(desc="Configuration IO")
+    Roles = PhyRoles  # Set the shared PHY Roles
+    pbias, nbias = h.Inputs(2)
+
+
+@h.bundle
+class HsTxDig:
+    """# High-Speed TX Digital IO Bundle"""
+
+    Roles = PhyRoles  # Set the shared PHY Roles
+    sck = h.Output(width=1, desc="High-Speed TX *Output* Serial TX Clock")
+    sdata = h.Input(width=1, desc="High-Speed TX Data")
+    shunt = h.Input(width=1, desc="High-Speed TX Shunt Drive Current")
+    en = h.Input(width=1, desc="High-Speed TX Output Enable")
 
 
 @h.generator
@@ -131,13 +142,10 @@ def HsTx(_: h.HasNoParams) -> h.Module:
 
         # IO
         VDD18, VSS = h.Ports(2)
-        sdata = h.Input(width=1, desc="Serial TX Data")
-        sck = Diff(desc="Serial Clock", port=True, role=Diff.Roles.SINK)
-        en = h.Input()
+        core_if = HsTxDig(port=True)
         out = TxTriplet(port=True, role=TxTriplet.Roles.SOURCE)
 
         # Internal Implementation
-        ## FIXME!
         ## FIXME: how much simple logic to include,
         ## e.g. the requirement that enable be exclusive with dp, dn, and shunt.
 
@@ -148,27 +156,19 @@ def HsTx(_: h.HasNoParams) -> h.Module:
         """
 
         # IO
-        SUPPLIES = PhySupplies(port=True)
-        # io = TxIo(port=True) # FIXME: combined bundle
+        SUPPLIES = PhySupplies(port=True, role=PhyRoles.PHY, desc="Supplies")
+        pads = Diff(port=True, role=Diff.Roles.SOURCE, desc="Transmit Pads")
+        pllsck = Diff(port=True, role=Diff.Roles.SINK, desc="Tx Pll Serial Clock")
+        dig = HsTxDig(port=True, role=PhyRoles.PHY, desc="Digital IO")
+        bias = HsTxBias(port=True, role=PhyRoles.PHY, desc="Bias Inputs")
 
-        ## Pad Interface
-        pads = Diff(
-            desc="Differential Transmit Pads", port=True, role=Diff.Roles.SOURCE
-        )
-        ## Core Interface
-        sdata = h.Input(width=1, desc="Serial TX Data")
-        shunt = h.Input(width=1, desc="Shunt Drive Current")
-        en = h.Input(width=1, desc="Enable")
-        ## PLL Interface
-        sck = Diff(desc="Serial Clock", port=True, role=Diff.Roles.SINK)
-        ## Bias Inputs
-        pbias, nbias = h.Inputs(2)
+        # FIXME: need to add a driver for the single-ended `sck` output.
 
-        # Internal Implementation
+        # Implementation
         ## Enable Level Shifter
         en_3v3 = h.Diff()
         ls_en = LevelShifter(
-            inp=en,
+            inp=dig.en,
             out=en_3v3,
             VDD18=SUPPLIES.VDD18,
             VDD33=SUPPLIES.VDD33,
@@ -184,9 +184,7 @@ def HsTx(_: h.HasNoParams) -> h.Module:
             shunt=predriver_shunt,
         )
         logic = HsTxLogic(
-            sdata=sdata,
-            sck=sck,
-            en=en,
+            core_if=dig,
             out=_predriver_inp,
             VDD18=SUPPLIES.VDD18,
             VSS=SUPPLIES.VSS,
@@ -202,7 +200,6 @@ def HsTx(_: h.HasNoParams) -> h.Module:
             VDD33=SUPPLIES.VDD33,
             VSS=SUPPLIES.VSS,
         )
-
         ## Output Driver
         _driver_inp = h.AnonymousBundle(
             # FIXME: this concatenating BundleRefs gonna work any minute now!!
@@ -210,10 +207,10 @@ def HsTx(_: h.HasNoParams) -> h.Module:
             dn=driver_dn,
             shunt=driver_shunt,
         )
-        driver = HsTxDriver()(
+        driver = HsTxDriver(h.Default)(
             inp=_driver_inp,
             pads=pads,
-            pbias=pbias,
+            pbias=bias.pbias,
             VDD18=SUPPLIES.VDD18,
             VDD33=SUPPLIES.VDD33,
             VSS=SUPPLIES.VSS,
