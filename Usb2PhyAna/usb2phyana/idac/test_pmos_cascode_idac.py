@@ -225,7 +225,7 @@ def run_and_plot_corners():
     result = Result(**pickle.load(open(result_pickle_file, "rb")))
 
     # And make some pretty pictures
-    plot(result, "IdacCodeSweep", "IdacCodeSweep.png")
+    plot(result, "IdacCodeSweep", "scratch/IdacCodeSweep.png")
 
 
 from ..tests.sim_test_mode import SimTestMode

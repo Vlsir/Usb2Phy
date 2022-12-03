@@ -23,7 +23,7 @@ from ..tests.sim_options import sim_options
 
 
 # Module-wide reused parameters
-result_pickle_file = "cmosilo.dac_code.pkl"
+result_pickle_file = "scratch/cmosilo.dac_code.pkl"
 codes = list(range(0, 32))
 
 
@@ -147,7 +147,7 @@ def run_and_plot_corners():
     result = Result(**pickle.load(open(result_pickle_file, "rb")))
 
     # And make some pretty pictures
-    plot(result, "Cmos Ilo - Dac vs Freq", "CmosIloDacFreq.png")
+    plot(result, "Cmos Ilo - Dac vs Freq", "scratch/CmosIloDacFreq.png")
 
 
 from ..tests.sim_test_mode import SimTestMode

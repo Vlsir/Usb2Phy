@@ -60,7 +60,7 @@ def run_corners(tbgen: h.Generator) -> Result:
         condition_results = codesweep(tbgen, pvt)
         result.results.append(condition_results)
 
-    pickle.dump(asdict(result), open("cmlro.dac.pkl", "wb"))
+    pickle.dump(asdict(result), open("scratch/cmlro.dac.pkl", "wb"))
     return result
 
 
@@ -131,10 +131,10 @@ def run_and_plot_corners():
     result = run_corners(CmlRoFreqTb)
 
     # Or just read them back from file, if we have one
-    result = Result(**pickle.load(open("cmlro.dac.pkl", "rb")))
+    result = Result(**pickle.load(open("scratch/cmlro.dac.pkl", "rb")))
 
     # And make some pretty pictures
-    plot(result, "CmlRoFreq", "CmlRoDac.png")
+    plot(result, "CmlRoFreq", "scratch/CmlRoDac.png")
 
 
 def test_cml_dac(simtestmode: SimTestMode):

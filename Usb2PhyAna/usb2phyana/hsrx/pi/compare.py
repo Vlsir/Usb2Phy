@@ -69,5 +69,5 @@ def compare():
     from .test_pi import PhaseInterpTb as CmosTb
     from .test_cmlpi import PhaseInterpTb as CmlTb
 
-    run_corners(CmosTb, "CMOS PI", "cmospi.png")
-    run_corners(CmlTb, "CML PI", "cmlpi.png")
+    run_corners(CmosTb, "CMOS PI", "scratch/cmospi.png")
+    run_corners(CmlTb, "CML PI", "scratch/cmlpi.png")

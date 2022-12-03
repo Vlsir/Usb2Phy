@@ -128,4 +128,4 @@ def test_phase_interp(simtestmode: SimTestMode):
         results = h.sim.run(sims, opts=sim_options)
 
         delays = [tdelay(r) for r in results]
-        save_plot(delays, "CML PI", "cmlpi.png")
+        save_plot(delays, "CML PI", "scratch/cmlpi.png")

@@ -88,7 +88,7 @@ def unwrap(delays: Sequence[float]) -> np.ndarray:
     return delays
 
 
-def save_plot(delays: Sequence[float], label: str, fname: str = "delays.png"):
+def save_plot(delays: Sequence[float], label: str, fname: str = "scratch/delays.png"):
     """Save a plot of the delays.
     Includes a small bit of "data munging", to remove periodic wraps modulo the reference period."""
 

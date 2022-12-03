@@ -87,7 +87,6 @@ def iv(Dut: MosDut) -> hs.SimResult:
         VSS = h.Port()  # The testbench interface: sole port VSS
 
         dut = Dut.dut(s=VSS, b=VSS)
-        # FIXME: the string variant of the ideal primitives params went away...
         vd = Vdc(Vdc.Params(dc="polarity * vds", ac=0 * m))(p=dut.d, n=VSS)
         vg = Vdc(Vdc.Params(dc="polarity * vgs", ac=1 * UNIT))(p=dut.g, n=VSS)
 
@@ -127,5 +126,5 @@ def postprocess(dut: MosDut, result: hs.SimResult) -> None:
     ax2.set_ylabel("Id (µA)")
     ax2.set_yscale("log")
     ax.grid()
-    fig.savefig(f"gm_over_id.{dut.dut.name}.png")
-    # np.save("gm_over_id.npy", gm_over_id)
+    fig.savefig(f"scratch/gm_over_id.{dut.dut.name}.png")
+    # np.save("scratch/gm_over_id.npy", gm_over_id)

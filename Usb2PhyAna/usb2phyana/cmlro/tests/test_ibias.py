@@ -256,7 +256,7 @@ def run_and_plot_corners():
     result = Result(**pickle.load(open(results_pickle_file, "rb")))
 
     # And make some pretty pictures
-    plot(result, "Cml Ro - Freq vs Ibias", "CmlRoFreqIbias.png")
+    plot(result, "Cml Ro - Freq vs Ibias", "scratch/CmlRoFreqIbias.png")
 
 
 from ...tests.sim_test_mode import SimTestMode

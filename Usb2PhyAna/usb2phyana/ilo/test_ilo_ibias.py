@@ -28,7 +28,7 @@ from .tb import Pvt, TbParams, IloFreqTb, sim_input
 
 
 ibs = [val * µ for val in range(100, 300, 10)]
-result_pickle_file = "cmosilo.freq.pkl"
+result_pickle_file = "scratch/cmosilo.freq.pkl"
 
 
 @dataclass
@@ -140,7 +140,7 @@ def run_and_plot_corners():
     result = Result(**pickle.load(open(result_pickle_file, "rb")))
 
     # And make some pretty pictures
-    plot(result, "Cmos Ilo Freq vs Ibias", "CmosIloFreqIbias.png")
+    plot(result, "Cmos Ilo Freq vs Ibias", "scratch/CmosIloFreqIbias.png")
 
 
 from ..tests.sim_test_mode import SimTestMode
