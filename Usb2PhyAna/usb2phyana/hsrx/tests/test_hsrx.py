@@ -2,23 +2,16 @@
 # High-Speed RX Tests
 """
 
-import pickle, io
-from typing import List, Tuple, Optional
-from dataclasses import asdict
-from copy import copy
-from pathlib import Path
+import io
 
-from pydantic.dataclasses import dataclass
-import numpy as np
-import matplotlib.pyplot as plt
-
-# Hdl & PDK Imports
+# Hdl Imports
 import hdl21 as h
 import hdl21.sim as hs
 from hdl21.pdk import Corner
-from hdl21.sim import Sim, LogSweep
 from hdl21.prefix import m, µ, f, n, T, p, PICO
 from hdl21.primitives import Vdc, Vpulse, Idc, C
+
+# PDK Imports
 import s130
 import sitepdks as _
 
@@ -26,6 +19,7 @@ from ...tests.sim_options import sim_options
 from ...tests.supplyvals import SupplyVals
 from ...tests.diffclockgen import DiffClkGen
 from ...tests.vcode import Vcode
+from ...tests.sim_test_mode import SimTestMode
 
 # DUT Imports
 from ..hsrx import HsRx
@@ -135,9 +129,6 @@ def sim_hsrx():
 
     results = HsrxSim.run(sim_options)
     print(results)
-
-
-from ...tests.sim_test_mode import SimTestMode
 
 
 def test_hsrx(simtestmode: SimTestMode):

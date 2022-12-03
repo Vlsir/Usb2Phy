@@ -19,10 +19,10 @@ Pbias = PmosIo(IoMosParams(w=10, l=10, m=50))
 
 @h.generator
 def PreAmp(_: h.HasNoParams) -> h.Module:
+    """# RX Pre-Amp"""
+
     @h.module
     class PreAmp:
-        """# RX Pre-Amp"""
-
         # IO
         VDD33, VSS = h.Ports(2)
         inp = Diff(port=True, role=Diff.Roles.SINK)
