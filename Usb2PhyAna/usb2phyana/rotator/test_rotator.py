@@ -13,7 +13,6 @@ from hdl21.prefix import m, n, p, f
 from hdl21.primitives import Vdc, Vpulse, Cap
 
 # DUT Imports
-from .. import resources
 from ..tests.sim_options import sim_options
 from .rotator import OneHotRotator
 
@@ -76,7 +75,7 @@ def sim_onehot_rotator():
     sim = h.sim.Sim(tb=rotator_tb(), attrs=s130.install.include(Corner.TYP))
     sim.tran(tstop=64 * n, name="THE_TRAN_DUH")
     # FIXME! relies on this netlist of logic cells
-    sim.include(resources / "scs130lp.sp")
+    sim.include(s130.resources / "stdcells.sp")
     results = sim.run(sim_options)
 
     print(results)

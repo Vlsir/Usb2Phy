@@ -9,9 +9,10 @@ import hdl21 as h
 # Local Imports
 from .phyroles import PhyRoles
 from .supplies import PhySupplies
-from .hstx import HsTx, HsTxDig, HsTxBias
-from .hsrx import HsRx, HsRxDig, HsRxBias
-from .tx_pll import TxPll, TxPllCtrl, TxPllBias
+from .hstx import HsTx, HsTxDig
+from .hsrx import HsRx, HsRxDig
+from .tx_pll import TxPll, TxPllCtrl
+from .other import PhyBias, BiasDist
 
 
 @h.bundle
@@ -37,14 +38,6 @@ class AnaDigBundle:
     fstx_pu_en = h.Input(desc="Full-speed pull-up enable")
     fsrx_diff = h.Output(desc="Differential Full-Speed RX")
     fsrx_linestate_p, fsrx_linestate_n = h.Outputs(2, desc="Single Ended Line State")
-
-
-@h.bundle
-class PhyBias:
-    """# Phy-Level Bias Input(s)"""
-
-    Roles = PhyRoles  # Set the shared PHY Roles
-    ibias = h.Signal()  # FIXME: detail this
 
 
 @h.generator
@@ -92,32 +85,3 @@ def Usb2PhyAna(_: h.HasNoParams) -> h.Module:
         )
 
     return Usb2PhyAna
-
-
-@h.module
-class BiasDist:
-    """Bias Distribution"""
-
-    # IO
-    SUPPLIES = PhySupplies(port=True, role=PhyRoles.PHY, desc="Supplies")
-    phy = PhyBias(port=True, desc="Phy Bias Input(s)")
-    txpll = TxPllBias(port=True, desc="Tx Pll Bias")
-    hsrx = HsRxBias(port=True, desc="Hs Rx Bias")
-    hstx = HsTxBias(port=True, desc="Hs Tx Bias")
-
-    # Implementation
-    # FIXME: the actual implementation!
-
-
-@h.module
-class FsTx:
-    """USB Full-Speed (12Mb) TX"""
-
-    # IO
-    SUPPLIES = PhySupplies(port=True, role=PhyRoles.PHY, desc="Supplies")
-    pd_en, pu_en = h.Inputs(2)
-    pads = h.Diff(desc="Differential Pads", port=True, role=h.Diff.Roles.SOURCE)
-
-    # Implementation
-    # FIXME: the actual implementation!
-

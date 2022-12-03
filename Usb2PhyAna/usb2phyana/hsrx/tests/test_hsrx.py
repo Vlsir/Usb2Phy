@@ -22,7 +22,6 @@ from hdl21.primitives import Vdc, Vpulse, Idc, C
 import s130
 import sitepdks as _
 
-from ... import resources
 from ...tests.sim_options import sim_options
 from ...tests.supplyvals import SupplyVals
 from ...tests.diffclockgen import DiffClkGen
@@ -129,7 +128,7 @@ def sim_hsrx():
             simulator lang=spectre
         """
         )
-        i = hs.Include(resources / "scs130lp.sp")
+        i = hs.Include(s130.resources / "stdcells.sp")
 
     # Add the PDK dependencies
     HsrxSim.add(*s130.install.include(params.pvt.p))

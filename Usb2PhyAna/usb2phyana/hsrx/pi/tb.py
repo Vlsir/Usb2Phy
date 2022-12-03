@@ -21,7 +21,6 @@ from hdl21.prefix import m, n
 from vlsirtools.spice.sim_data import SimResult
 
 # Local Imports
-from ... import resources
 from ...tests.sim_options import sim_options
 
 
@@ -60,7 +59,7 @@ def sim_input(tb: h.Instantiable, params: TbParams) -> Sim:
     )
 
     # FIXME! relies on this netlist of logic cells
-    sim.include(resources / "scs130lp.sp")
+    sim.include(s130.resources / "stdcells.sp")
 
     # FIXME: handling of multi-directory sims
     # opts = copy(sim_options)

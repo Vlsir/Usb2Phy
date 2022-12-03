@@ -22,7 +22,6 @@ from hdl21.primitives import Vdc, Vpulse, Idc, C
 import s130
 import sitepdks as _
 
-from .. import resources
 from ..tests.sim_options import sim_options
 
 # DUT Imports
@@ -120,7 +119,7 @@ def sim_ilo_injection():
         """
         )
         # FIXME! relies on this netlist of logic cells
-        i = hs.Include(resources / "scs130lp.sp")
+        i = hs.Include(s130.resources / "stdcells.sp")
 
     # Add the PDK dependencies
     IloSim.add(*s130.install.include(params.pvt.p))
