@@ -58,7 +58,7 @@ def sim_input(tb: h.Instantiable, params: TbParams) -> Sim:
     """
     )
 
-    # FIXME! relies on this netlist of logic cells
+    
     sim.include(s130.resources / "stdcells.sp")
 
     # FIXME: handling of multi-directory sims

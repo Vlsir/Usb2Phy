@@ -9,8 +9,10 @@ import hdl21 as h
 from .preamp import PreAmp
 from .slicer import Slicer
 from ..ilo import Ilo
+from ..pulse_gen import PulseGen
 from ..phyroles import PhyRoles
 from ..supplies import PhySupplies
+from ..logiccells import Nor2, Inv, Xor2
 
 
 @h.bundle
@@ -83,10 +85,8 @@ def Cdr(_: h.HasNoParams) -> h.Module:
 
     @h.module
     class Cdr:
-
         # IO Interface
-        ## Supplies
-        SUPPLIES = PhySupplies(port=True)
+        SUPPLIES = PhySupplies(port=True, role=PhyRoles.PHY, desc="Supplies")
 
         ## Primary IO
         data = h.Diff(port=True, role=h.Diff.Roles.SINK, desc="RX Data")
@@ -97,8 +97,9 @@ def Cdr(_: h.HasNoParams) -> h.Module:
 
         # Implementation
         inj = h.Signal()
-        ## FIXME! add the pulse generation
-        # pulse_gen = DataPulseGen()(data=data)
+        pulse_gen = PulseGen(h.Default)(
+            inp=data.p, en=cdr_en, pulse=inj, SUPPLIES=SUPPLIES
+        )
         ilo = Ilo(h.Default)(
             inj=inj,
             pbias=pbias,

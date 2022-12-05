@@ -4,21 +4,24 @@
 
 import io
 
-# Hdl & PDK Imports
+# Hdl Imports
 import hdl21 as h
 import hdl21.sim as hs
 from hdl21 import Diff
 from hdl21.pdk import Corner
 from hdl21.prefix import m, µ, f, n, T, PICO
 from hdl21.primitives import Vdc, Idc, C
+
+# PDK Imports
 import s130
 import sitepdks as _
 
-from ...tests.sim_options import sim_options
 
-# DUT Imports
+# Local Imports
 from .preamp import PreAmp
 from ...tests.diffclockgen import DiffClkGen
+from ...tests.sim_options import sim_options
+from ...tests.sim_test_mode import SimTestMode
 
 
 @h.paramclass
@@ -71,8 +74,8 @@ def PreAmpTb(p: TbParams) -> h.Module:
     # Input voltage
     tb.inp = Diff()
 
-    ## FIXME! we need different stimulus for Ac vs Tran, sort out how to manage
-    ## For Ac: the "balnun"
+    ## FIXME! we need different stimulus for Ac vs Tran, manage swapping between these
+    ## For Ac: the "balun"
     ## tb.balun = Balun(vc=p.vc)(diff=tb.inp, VSS=tb.VSS)
     ## For Tran: generate a differential clock pattern
     tb.ckg = DiffClkGen(
@@ -100,9 +103,6 @@ def PreAmpTb(p: TbParams) -> h.Module:
         VSS=tb.VSS,
     )
     return tb
-
-
-from ...tests.sim_test_mode import SimTestMode
 
 
 def test_preamp(simtestmode: SimTestMode):

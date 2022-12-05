@@ -3,31 +3,24 @@
 """
 
 import pickle, io
-from typing import List, Tuple, Optional
-from dataclasses import asdict
-from copy import copy
-from pathlib import Path
-
-from pydantic.dataclasses import dataclass
 import numpy as np
-import matplotlib.pyplot as plt
 
-# Hdl & PDK Imports
+# Hdl Imports
 import hdl21 as h
 import hdl21.sim as hs
-from hdl21.pdk import Corner
-from hdl21.sim import Sim, LogSweep
-from hdl21.prefix import m, µ, f, n, T, PICO
-from hdl21.primitives import Vdc, Vpulse, Idc, C
+from hdl21.prefix import m, n, PICO
+from hdl21.primitives import Vpulse
+
+# PDK Imports
 import s130
 import sitepdks as _
 
-from ..tests.sim_options import sim_options
-
-# DUT Imports
+# Local/ DUT Imports
 from .ilo import IloParams
 from .tb import Pvt, TbParams, IloSharedTb, tperiod
 from .test_dac_code import Result, result_pickle_file as dac_code_result_pickle_file
+from ..tests.sim_options import sim_options
+from ..tests.sim_test_mode import SimTestMode
 
 
 def best_dac_code(result: Result, pvt: Pvt) -> int:
@@ -62,21 +55,16 @@ def IloInjectionTb(params: TbParams) -> h.Module:
 
     # Create the injection-pulse source, which also serves as our kick-start
     tb.vinj = Vpulse(
-        Vpulse.Params(
-            v1=0 * m,
-            v2=1800 * m,
-            period=16667 * PICO,  # ~ 60MHz
-            rise=10 * PICO,
-            fall=10 * PICO,
-            width=5 * PICO,
-            delay=4 * n,
-        )
+        v1=0 * m,
+        v2=1800 * m,
+        period=16667 * PICO,  # ~ 60MHz
+        rise=10 * PICO,
+        fall=10 * PICO,
+        width=5 * PICO,
+        delay=4 * n,
     )(p=tb.inj, n=tb.VSS)
 
     return tb
-
-
-from ..tests.sim_test_mode import SimTestMode
 
 
 def test_ilo_injection(simtestmode: SimTestMode):
@@ -118,7 +106,7 @@ def sim_ilo_injection():
             simulator lang=spectre
         """
         )
-        # FIXME! relies on this netlist of logic cells
+        
         i = hs.Include(s130.resources / "stdcells.sp")
 
     # Add the PDK dependencies

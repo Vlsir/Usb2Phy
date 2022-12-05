@@ -3,7 +3,7 @@
 """
 
 # Std-Lib Imports
-import sys, io
+import io
 
 # Hdl Imports
 import hdl21 as h
@@ -62,15 +62,14 @@ def sim_phy():
     import sitepdks as _
 
     params = TbParams()
-    the_tb = PhyTb(params)
-    s130.compile(the_tb)
-    s130.compile(the_tb)
+    phy_tb = PhyTb(params)
+    h.pdk.compile(phy_tb)
 
     # Create some simulation stimulus
     @h.sim.sim
     class PhySim:
         # The testbench
-        tb = the_tb
+        tb = phy_tb
 
         # Our sole analysis: transient
         tr = h.sim.Tran(tstop=50 * NANO)
@@ -93,9 +92,13 @@ def sim_phy():
 
 
 def test_phy(simtestmode: SimTestMode):
-    """Test netlisting some big-picture Modules"""
+    """PHY top-level test"""
+
+    phy = Usb2PhyAna()
+    h.elaborate(phy)
+    h.elaborate(phy)
 
     if simtestmode == SimTestMode.NETLIST:
-        h.netlist(Usb2PhyAna(), dest=io.StringIO(), fmt="spectre")
+        h.netlist(phy, dest=io.StringIO(), fmt="spectre")
     else:
         sim_phy()

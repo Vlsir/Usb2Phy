@@ -100,15 +100,13 @@ def IloFreqTb(params: TbParams) -> h.Module:
 
     # Create the injection-pulse source, which in this bench serves entirely as a kick-start
     tb.vinj = Vpulse(
-        Vpulse.Params(
-            v1=1800 * m,
-            v2=0 * m,
-            period=1001 * m,  # "Infinite" period
-            rise=10 * PICO,
-            fall=10 * PICO,
-            width=1000 * m,
-            delay=10 * PICO,
-        )
+        v1=1800 * m,
+        v2=0 * m,
+        period=1001 * m,  # "Infinite" period
+        rise=10 * PICO,
+        fall=10 * PICO,
+        width=1000 * m,
+        delay=10 * PICO,
     )(p=tb.inj, n=tb.VSS)
 
     return tb
@@ -142,7 +140,7 @@ def sim_input(tbgen: h.Generator, params: TbParams) -> hs.Sim:
             simulator lang=spectre
         """
         )
-        # FIXME! relies on this netlist of logic cells
+        
         i = hs.Include(s130.resources / "stdcells.sp")
 
     # Add the PDK dependencies

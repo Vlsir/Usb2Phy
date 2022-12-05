@@ -140,7 +140,7 @@ def sim_input(tbgen: h.Generator, params: TbParams) -> hs.Sim:
         """
         )
 
-        # FIXME! relies on this netlist of logic cells
+        
         i = hs.Include(s130.resources / "stdcells.sp")
 
     # Add the PDK dependencies

@@ -82,7 +82,7 @@ def sim_thermo_encoder(p: TbParams) -> None:
     sim = Sim(tb=tb, attrs=s130.install.include(Corner.TYP))
     sim.op()
 
-    # FIXME! relies on this netlist of logic cells
+    
     sim.include(s130.resources / "stdcells.sp")
     # sim_options.rundir = Path(f"./scratch/code{code}")
     results = sim.run(sim_options)

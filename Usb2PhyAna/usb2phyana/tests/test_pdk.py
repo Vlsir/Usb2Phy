@@ -9,11 +9,11 @@ import matplotlib.pyplot as plt
 import hdl21 as h
 import hdl21.sim as hs
 from hdl21.pdk import Corner
-from hdl21.sim import Sim, LogSweep, LinearSweep
-from hdl21.prefix import e, m, µ, UNIT
+from hdl21.sim import Sim, LinearSweep
+from hdl21.prefix import m, µ, UNIT
 from hdl21.primitives import MosType, Vdc
 
-# HDL & PDK Imports
+# PDK Imports
 import sitepdks as _
 import s130
 from s130 import MosParams, IoMosParams
@@ -61,8 +61,10 @@ class MosDut:
     mostype: MosType
 
 
-def test_iv():
+def test_iv(simtestmode: SimTestMode):
     """I-V Curve Test"""
+    if simtestmode == SimTestMode.NETLIST:
+        return  # Nothing to do here
 
     duts = [
         MosDut(nmos(MosParams()), MosType.NMOS),
