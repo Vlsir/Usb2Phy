@@ -1,22 +1,22 @@
-import io, copy
-from pathlib import Path
+import io
 from dataclasses import dataclass
 
 # PyPi Imports
 import numpy as np
 import matplotlib.pyplot as plt
 
-# HDL & PDK Imports
-import sitepdks as _
-import s130
-from s130 import MosParams, IoMosParams
-
+# HDL Imports
 import hdl21 as h
 import hdl21.sim as hs
 from hdl21.pdk import Corner
 from hdl21.sim import Sim, LogSweep, LinearSweep
 from hdl21.prefix import e, m, µ, UNIT
 from hdl21.primitives import MosType, Vdc
+
+# HDL & PDK Imports
+import sitepdks as _
+import s130
+from s130 import MosParams, IoMosParams
 
 # Local Imports
 from .sim_options import sim_options
@@ -55,9 +55,9 @@ def test_pdk(simtestmode: SimTestMode):
 
 @dataclass
 class MosDut:
-    """Dut info for the IV Curve Test"""
+    """# Mos "Design" Under Test"""
 
-    dut: h.Instantiable
+    mos: h.Instantiable
     mostype: MosType
 
 
@@ -79,36 +79,32 @@ def test_iv():
         postprocess(dut, result)
 
 
-def iv(Dut: MosDut) -> hs.SimResult:
+def iv(mosdut: MosDut) -> hs.SimResult:
     """Create and return an IV Curve Sim"""
 
     @h.module
-    class Tb:
+    class MosIvTb:
         VSS = h.Port()  # The testbench interface: sole port VSS
 
-        dut = Dut.dut(s=VSS, b=VSS)
-        vd = Vdc(Vdc.Params(dc="polarity * vds", ac=0 * m))(p=dut.d, n=VSS)
-        vg = Vdc(Vdc.Params(dc="polarity * vgs", ac=1 * UNIT))(p=dut.g, n=VSS)
+        mos = mosdut.mos(s=VSS, b=VSS)  # The transistor under test
+        vd = Vdc(dc="polarity * vds")(p=mos.d, n=VSS)
+        vg = Vdc(dc="polarity * vgs", ac=1 * UNIT)(p=mos.g, n=VSS)
 
-    sim = Sim(tb=Tb, attrs=s130.install.include(Corner.TYP))
-    vgs = sim.param(name="vgs", val=1800 * m)
-    vds = sim.param(name="vds", val=1800 * m)
-    polarity = sim.param(name="polarity", val=1 if Dut.mostype == MosType.NMOS else -1)
-    dc = sim.dc(
-        var=vgs, sweep=LinearSweep(start=0, stop=2500 * m, step=10 * m), name="dc"
-    )
-    # ac = sim.ac(sweep=LogSweep(start=1, stop=1 * e(12), npts=100))
-    # sim.meas(ac, "igate_at_1M", "find 'mag(i(xtop.vg))' at=1e6")
-    # sim.meas(ac, "cin", "param='igate_at_1M / 2 / 3.14159 / 1e6'")
+    @hs.sim
+    class MosIvSim:
+        tb = MosIvTb
+        vgs = hs.Param(val=1800 * m)
+        vds = hs.Param(val=1800 * m)
+        polarity = hs.Param(val=1 if mosdut.mostype == MosType.NMOS else -1)
+        dc = hs.Dc(var=vgs, sweep=LinearSweep(start=0, stop=2500 * m, step=10 * m))
 
-    return sim.run(sim_options)
+    MosIvSim.add(*s130.install.include(Corner.TYP))
+    return MosIvSim.run(sim_options)
 
 
 def postprocess(dut: MosDut, result: hs.SimResult) -> None:
     """Post-process and plot results from an `iv()` run on `dut`."""
     result = result.an[0]  # Get the DC sweep
-    print(result.measurements)
-
     step = float(10 * m)  # FIXME: get this from the sweep above
 
     id = np.abs(result.data["xtop.vd:p"])
