@@ -2,7 +2,8 @@
 # ILO Tests 
 """
 
-import pickle, io
+import pickle, io, copy
+from pathlib import Path
 import numpy as np
 
 # Hdl Imports
@@ -20,7 +21,7 @@ from .ilo import IloParams
 from .tb import Pvt, TbParams, IloSharedTb, tperiod
 from .test_dac_code import Result, result_pickle_file as dac_code_result_pickle_file
 from ..tests.sim_options import sim_options
-from ..tests.sim_test_mode import SimTestMode
+from ..tests.sim_test_mode import SimTestMode, SimTest
 
 
 def best_dac_code(result: Result, pvt: Pvt) -> int:
@@ -60,29 +61,32 @@ def IloInjectionTb(params: TbParams) -> h.Module:
         period=16667 * PICO,  # ~ 60MHz
         rise=10 * PICO,
         fall=10 * PICO,
-        width=5 * PICO,
-        delay=4 * n,
+        width=100 * PICO,
+        delay=3000 * PICO,
     )(p=tb.inj, n=tb.VSS)
 
     return tb
 
 
-def test_ilo_injection(simtestmode: SimTestMode):
-    """Ilo Injection Test(s)"""
-    if simtestmode in (SimTestMode.MIN, SimTestMode.NETLIST):
-        # In min-mode just netlist
-        params = TbParams(pvt=Pvt(), ilo=IloParams(), code=1)
-        h.netlist(IloInjectionTb(params), dest=io.StringIO())
-    else:
-        # And in any other mode run simulation
-        sim_ilo_injection()
+# def test_ilo_injection(simtestmode: SimTestMode):
+#     """Ilo Injection Test(s)"""
+#     if simtestmode in (SimTestMode.MIN, SimTestMode.NETLIST):
+#         # In min-mode just netlist
+#         params = TbParams(pvt=Pvt(), ilo=IloParams(), code=1)
+#         h.netlist(IloInjectionTb(params), dest=io.StringIO())
+#     else:
+#         # And in any other mode run simulation
+#         sim_ilo_injection()
 
 
 def sim_ilo_injection():
-    # Get the best DAC code from saved frequency-sweep results
     pvt = Pvt()
-    dac_code_result = Result(**pickle.load(open(dac_code_result_pickle_file, "rb")))
-    dac_code = best_dac_code(result=dac_code_result, pvt=pvt)
+
+    # Get the best DAC code from saved frequency-sweep results
+    # FIXME: recreate good values in this pickled data! It's gotten outta whack
+    # dac_code_result = Result(**pickle.load(open(dac_code_result_pickle_file, "rb")))
+    # dac_code = best_dac_code(result=dac_code_result, pvt=pvt)
+    dac_code = 11
 
     params = TbParams(pvt=pvt, ilo=IloParams(), code=dac_code)
 
@@ -94,7 +98,7 @@ def sim_ilo_injection():
 
         # Our sole analysis: transient, for much longer than we need.
         # But auto-stopping when measurements complete.
-        tr = hs.Tran(tstop=250 * n)
+        tr = hs.Tran(tstop=7500 * n)
 
         # The stuff we can't first-class represent, and need to stick in a literal.
         l = hs.Literal(
@@ -106,11 +110,30 @@ def sim_ilo_injection():
             simulator lang=spectre
         """
         )
-        
+
         i = hs.Include(s130.resources / "stdcells.sp")
 
     # Add the PDK dependencies
     IloSim.add(*s130.install.include(params.pvt.p))
 
-    results = IloSim.run(sim_options)
+    opts = copy.copy(sim_options)
+    opts.rundir = Path("scratch")
+
+    results = IloSim.run(opts)
     print(results)
+
+
+class TestIloInjection(SimTest):
+    """Ilo Injection Test(s)"""
+
+    tbgen = IloInjectionTb
+
+    def min(self):
+        return self.netlist()
+
+    def typ(self):
+        return sim_ilo_injection()
+
+    def max(self):
+        # FIXME: add corner runs
+        raise NotImplementedError

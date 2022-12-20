@@ -1,6 +1,6 @@
 import io
 from enum import Enum
-from dataclasses import dataclass
+from typing import Optional
 
 import hdl21 as h
 
@@ -21,11 +21,12 @@ class SimTestMode(Enum):
     MAX = "max"  # Run everything
 
 
-@dataclass
 class SimTest:
-    tbgen: h.Generator  # The testbench generator function
+    # The testbench generator function
+    # Must be set in sub-classes
+    tbgen: Optional[h.Generator] = None
 
-    def default(self) -> h.Module:
+    def default_module(self) -> h.Module:
         return self.tbgen(self.default_params())
 
     def default_params(self) -> "self.tbgen.Params":
@@ -36,8 +37,35 @@ class SimTest:
         return self.tbgen.Params()
 
     def netlist(self) -> None:
-        """Write a netlist for our default-parameterized"""
-        return h.netlist(self.default(), dest=io.StringIO())
+        """# Netlist
+        Run the `SimTestMode.NETLIST` test mode.
+        Default case writes a netlist for our default-parameterized generator."""
+        return h.netlist(self.default_module(), dest=io.StringIO())
 
-    def run_mode(self, simtestmode: SimTestMode) -> None:
-        ...
+    def test(self, simtestmode: SimTestMode) -> None:
+        """Pytest's primary entry point for classes with `Test` prefixed-names.
+        Runs our test in `simtestmode`."""
+
+        if simtestmode == SimTestMode.NETLIST:
+            return self.netlist()
+        if simtestmode == SimTestMode.MIN:
+            return self.min()
+        if simtestmode == SimTestMode.TYP:
+            return self.typ()
+        if simtestmode == SimTestMode.MAX:
+            return self.max()
+        raise ValueError(f"Invalid SimTestMode {simtestmode}")
+
+    def min(self) -> None:
+        """Test in the "MIN" SimTestMode."""
+        # Default case "up-levels" to the "TYP" mode.
+        return self.typ()
+
+    def typ(self) -> None:
+        """Test in the "TYP" SimTestMode."""
+        # Default case "up-levels" to the "MAX" mode.
+        return self.max()
+
+    def max(self) -> None:
+        """Test in the "MAX" SimTestMode."""
+        raise NotImplementedError

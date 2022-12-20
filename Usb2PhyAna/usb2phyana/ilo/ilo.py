@@ -17,12 +17,8 @@ from ..width import Width
 from ..supplies import PhySupplies
 
 
-PmosHvt = s130.modules.pmos_hvt
 Pmos = s130.modules.pmos
 Nmos = s130.modules.nmos
-NmosLvt = s130.modules.nmos_lvt
-
-Pbias = Pmos(MosParams(w=1, l=1, m=100))
 
 
 @h.paramclass
@@ -75,6 +71,7 @@ def IloStage(params: IloParams) -> h.Module:
 @h.generator
 def IloRing(params: IloParams) -> h.Module:
     """# ILO Ring Oscillator"""
+    Ninj = Nmos(m=2)
 
     @h.module
     class IloRing:
@@ -95,18 +92,18 @@ def IloRing(params: IloParams) -> h.Module:
         i3 = IloStage(params)(inp=stg3, out=inverse(stg0), VDD=VDD, VSS=VSS)
 
         ## Injection Nmos Switches
-        n0 = NmosLvt(MosParams(w=5))(g=inj, d=stg0.p, s=stg0.n, b=VSS)
-        n1 = NmosLvt(MosParams(w=5))(g=VSS, d=stg1.p, s=stg1.n, b=VSS)
-        n2 = NmosLvt(MosParams(w=5))(g=VSS, d=stg2.p, s=stg2.n, b=VSS)
-        n3 = NmosLvt(MosParams(w=5))(g=VSS, d=stg3.p, s=stg3.n, b=VSS)
-        np0 = NmosLvt(MosParams(w=5))(g=VSS, d=stg0.p, s=VSS, b=VSS)
-        np1 = NmosLvt(MosParams(w=5))(g=inj, d=stg1.p, s=VSS, b=VSS)
-        np2 = NmosLvt(MosParams(w=5))(g=inj, d=stg2.p, s=VSS, b=VSS)
-        np3 = NmosLvt(MosParams(w=5))(g=inj, d=stg3.p, s=VSS, b=VSS)
-        nn0 = NmosLvt(MosParams(w=5))(g=VSS, d=stg0.n, s=VSS, b=VSS)
-        nn1 = NmosLvt(MosParams(w=5))(g=VSS, d=stg1.n, s=VSS, b=VSS)
-        nn2 = NmosLvt(MosParams(w=5))(g=VSS, d=stg2.n, s=VSS, b=VSS)
-        nn3 = NmosLvt(MosParams(w=5))(g=VSS, d=stg3.n, s=VSS, b=VSS)
+        n0 = Ninj(g=inj, d=stg0.p, s=stg0.n, b=VSS)
+        n1 = Ninj(g=VSS, d=stg1.p, s=stg1.n, b=VSS)
+        n2 = Ninj(g=VSS, d=stg2.p, s=stg2.n, b=VSS)
+        n3 = Ninj(g=VSS, d=stg3.p, s=stg3.n, b=VSS)
+        np0 = Ninj(g=VSS, d=stg0.p, s=VSS, b=VSS)
+        np1 = Ninj(g=inj, d=stg1.p, s=VSS, b=VSS)
+        np2 = Ninj(g=inj, d=stg2.p, s=VSS, b=VSS)
+        np3 = Ninj(g=inj, d=stg3.p, s=VSS, b=VSS)
+        nn0 = Ninj(g=VSS, d=stg0.n, s=VSS, b=VSS)
+        nn1 = Ninj(g=VSS, d=stg1.n, s=VSS, b=VSS)
+        nn2 = Ninj(g=VSS, d=stg2.n, s=VSS, b=VSS)
+        nn3 = Ninj(g=VSS, d=stg3.n, s=VSS, b=VSS)
 
     return IloRing
 

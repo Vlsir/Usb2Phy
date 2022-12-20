@@ -126,7 +126,6 @@ def sim_input(tbgen: h.Generator, params: TbParams) -> hs.Sim:
         """
         )
 
-        
         i = hs.Include(s130.resources / "stdcells.sp")
 
         op = hs.Op()

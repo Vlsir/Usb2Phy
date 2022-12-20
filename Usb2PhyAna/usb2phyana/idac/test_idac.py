@@ -102,7 +102,6 @@ def sim_input(tbgen: h.Generator, params: TbParams) -> hs.Sim:
         """
         )
 
-        
         i = hs.Include(s130.resources / "stdcells.sp")
 
     # Add the PDK dependencies

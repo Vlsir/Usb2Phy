@@ -3,6 +3,7 @@
 """
 
 import pickle, io
+from pathlib import Path
 from typing import List
 from dataclasses import asdict
 from copy import copy
@@ -20,11 +21,39 @@ from hdl21.prefix import m, µ, f, K
 # Local Imports
 from .tb import IloFreqTb, Pvt, TbParams, sim_input
 from ..tests.sim_options import sim_options
+from ..tests.sim_test_mode import SimTestMode, SimTest
 
 
 # Module-wide reused parameters
 result_pickle_file = "scratch/cmosilo.dac_code.pkl"
 codes = list(range(0, 32))
+
+
+@dataclass
+class SingleSimSummary:
+    freq: float
+    idd: float
+
+    @classmethod
+    def build(cls, sim_result: hs.SimResult) -> "SingleSimSummary":
+        freq = 1 / tperiod(sim_result)
+        idd_ = abs(1e6 * idd(sim_result))
+
+        # Numpy interpolation requires the x-axis array be NaN-free
+        # This often happens at low Vdd, when the ring fails to oscillate,
+        # or goes slower than we care to simulate.
+        # Replace any such NaN values with zero.
+        # If there are any later in the array, this interpolation will fail.
+        freq = np.nan_to_num(freq, copy=True, nan=0)
+        return SingleSimSummary(freq, idd=idd_)
+
+
+@dataclass
+class ConditionResult:
+    # Results at a single PVT condition
+    cond: Pvt
+    codes: List[int]
+    summaries: List[SingleSimSummary]
 
 
 @dataclass
@@ -34,7 +63,7 @@ class Result:
     # List of Dac codes simulated
     codes: List[int]
     # Sim Results, per PVT, per code
-    results: List[List[hs.SimResult]]
+    cond_results: List[ConditionResult]
 
 
 def run_corners(tbgen: h.Generator) -> Result:
@@ -52,14 +81,14 @@ def run_corners(tbgen: h.Generator) -> Result:
     # Run conditions one at a time, parallelizing across codes
     for pvt in conditions:
         print(f"Simulating {pvt}")
-        condition_results = codesweep(tbgen, pvt)
-        result.results.append(condition_results)
+        cond_results = codesweep(tbgen, pvt)
+        result.cond_results.append(cond_results)
 
     pickle.dump(asdict(result), open(result_pickle_file, "wb"))
     return result
 
 
-def codesweep(tbgen: h.Generator, pvt: Pvt) -> List[hs.SimResult]:
+def codesweep(tbgen: h.Generator, pvt: Pvt) -> ConditionResult:
     """Run `sim` on `tbgen`, across codes, at conditions `pvt`."""
 
     opts = copy(sim_options)
@@ -71,7 +100,12 @@ def codesweep(tbgen: h.Generator, pvt: Pvt) -> List[hs.SimResult]:
     sims = [sim_input(tbgen=tbgen, params=p) for p in params]
 
     # Run sims
-    return h.sim.run(sims, opts)
+    sim_results = h.sim.run(sims, opts)
+    return ConditionResult(
+        cond=pvt,
+        codes=codes,
+        summaries=[SingleSimSummary.build(s) for s in sim_results],
+    )
 
 
 def plot(result: Result, title: str, fname: str):
@@ -80,34 +114,8 @@ def plot(result: Result, title: str, fname: str):
     fig, ax = plt.subplots()
     codes = np.array(result.codes)
 
-    for (cond, cond_results) in zip(result.conditions, result.results):
-        label = f"{str(cond.p), str(cond.v), str(cond.t)}"
-
-        # Post-process the results into (ib, period) curves
-        freqs = np.array([1 / tperiod(r) for r in cond_results])
-        idds = np.abs(np.array([1e6 * idd(r) for r in cond_results]))
-
-        # Numpy interpolation requires the x-axis array be NaN-free
-        # This often happens at low Vdd, when the ring fails to oscillate,
-        # or goes slower than we care to simulate.
-        # Replace any such NaN values with zero.
-        # If there are any later in the array, this interpolation will fail.
-        freqs_no_nan = np.nan_to_num(freqs, copy=True, nan=0)
-        idd_480 = np.interp(x=480e6, xp=freqs_no_nan, fp=idds)
-        # print(idd_480)
-
-        # Check for non-monotonic frequencies
-        freq_steps = np.diff(freqs_no_nan)
-        if np.any(freq_steps < 0):
-            print(cond)
-        min_freq = np.min(freqs_no_nan) / 1e6
-        max_freq = np.max(freqs_no_nan) / 1e6
-        print(label, min_freq, max_freq)
-        if min_freq > 480 or max_freq < 480:
-            print("OUT OF RANGE")
-
-        # And plot the results
-        ax.plot(codes, freqs / 1e6, label=label)
+    for (cond, cond_results) in zip(result.conditions, result.cond_results):
+        plot_cond(ax, codes, cond, cond_results)
 
     # Set up all the other data on our plot
     ax.grid()
@@ -118,6 +126,39 @@ def plot(result: Result, title: str, fname: str):
 
     # And save it to file
     fig.savefig(fname)
+
+
+def plot_cond(ax, cond_results: ConditionResult):
+    """Add a plot for Pvt condition `cond_results` to `ax`"""
+    cond = cond_results.cond
+    codes = cond_results.codes
+    label = f"{str(cond.p), str(cond.v), str(cond.t)}"
+
+    # Post-process the results into (ib, period) curves
+    freqs = np.array([r.freq for r in cond_results.summaries])
+    idds = np.array([r.idd for r in cond_results.summaries])
+
+    # Numpy interpolation requires the x-axis array be NaN-free
+    # This often happens at low Vdd, when the ring fails to oscillate,
+    # or goes slower than we care to simulate.
+    # Replace any such NaN values with zero.
+    # If there are any later in the array, this interpolation will fail.
+    freqs_no_nan = np.nan_to_num(freqs, copy=True, nan=0)
+    idd_480 = np.interp(x=480e6, xp=freqs_no_nan, fp=idds)
+    # print(idd_480)
+
+    # Check for non-monotonic frequencies
+    freq_steps = np.diff(freqs_no_nan)
+    if np.any(freq_steps < 0):
+        print(cond)
+    min_freq = np.min(freqs_no_nan) / 1e6
+    max_freq = np.max(freqs_no_nan) / 1e6
+    print(label, min_freq, max_freq)
+    if min_freq > 480 or max_freq < 480:
+        print("OUT OF RANGE")
+
+    # And plot the results
+    ax.plot(codes, freqs / 1e6, label=label)
 
 
 def idd(results: hs.SimResult) -> float:
@@ -132,36 +173,38 @@ def run_one() -> hs.SimResult:
     """Run a typical-case, mid-code sim"""
 
     print("Running Typical Conditions")
+    opts = copy(sim_options)
     params = TbParams()
-    results = sim_input(IloFreqTb, params).run(sim_options)
-
+    sim_result = sim_input(IloFreqTb, params).run(opts)
+    summary = SingleSimSummary.build(sim_result)
     print("Typical Condition Results:")
-    print(results)
+    print(summary)
 
 
-def run_and_plot_corners():
-    # Run corner simulations to get results
-    result = run_corners(IloFreqTb)
-
-    # Or just read them back from file, if we have one
-    result = Result(**pickle.load(open(result_pickle_file, "rb")))
-
-    # And make some pretty pictures
-    plot(result, "Cmos Ilo - Dac vs Freq", "scratch/CmosIloDacFreq.png")
-
-
-from ..tests.sim_test_mode import SimTestMode
-
-
-def test_ilo_dac_code(simtestmode: SimTestMode):
+class TestIloDacCode(SimTest):
     """Cmos Ilo Dac Code vs Frequence Test(s)"""
 
-    if simtestmode == SimTestMode.NETLIST:
-        params = TbParams()
-        h.netlist(IloFreqTb(params), dest=io.StringIO())
-    elif simtestmode == SimTestMode.MIN:
+    tbgen = IloFreqTb
+
+    def min(self):
+        """Run a single code at typical conditions"""
         run_one()
-    elif simtestmode == SimTestMode.TYP:
-        codesweep(pvt=Pvt())
-    else:
-        run_and_plot_corners()
+
+    def typ(self):
+        """Sweep DAC codes at typical PVT conditions"""
+        results = codesweep(tbgen=IloFreqTb, pvt=Pvt())
+        fig, ax = plt.subplots()
+        plot_cond(ax, results)
+        fig.savefig("scratch/codesweep.png")
+
+    def max(self):
+        """Sweep DAC codes across PVT conditions"""
+
+        # Run corner simulations to get results
+        result = run_corners(IloFreqTb)
+
+        # Or just read them back from file, if we have one
+        # result = Result(**pickle.load(open(result_pickle_file, "rb")))
+
+        # And make some pretty pictures
+        plot(result, "Cmos Ilo - Dac vs Freq", "scratch/CmosIloDacFreq.png")

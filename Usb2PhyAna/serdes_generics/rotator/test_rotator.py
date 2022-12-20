@@ -74,7 +74,7 @@ def sim_onehot_rotator():
 
     sim = h.sim.Sim(tb=rotator_tb(), attrs=s130.install.include(Corner.TYP))
     sim.tran(tstop=64 * n, name="THE_TRAN_DUH")
-    
+
     sim.include(s130.resources / "stdcells.sp")
     results = sim.run(sim_options)
 

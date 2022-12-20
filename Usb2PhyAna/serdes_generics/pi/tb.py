@@ -58,7 +58,6 @@ def sim_input(tb: h.Instantiable, params: TbParams) -> Sim:
     """
     )
 
-    
     sim.include(s130.resources / "stdcells.sp")
 
     # FIXME: handling of multi-directory sims
