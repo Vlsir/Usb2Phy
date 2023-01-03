@@ -27,7 +27,7 @@ class SimTest:
     tbgen: Optional[h.Generator] = None
 
     def default_module(self) -> h.Module:
-        """ Generate the default-parameterized testbench module. """
+        """Generate the default-parameterized testbench module."""
         m = self.tbgen(self.default_params())
         h.pdk.compile(m)
         return m

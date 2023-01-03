@@ -52,6 +52,7 @@ def test_pdk(simtestmode: SimTestMode):
         sim.tran(tstop=1 * µ, name="tran1")
         sim.run(sim_options)
 
+
 def test_pdk_compile(simtestmode: SimTestMode):
     """Non-PHY test that we can execute simulations with the installed PDK"""
 
