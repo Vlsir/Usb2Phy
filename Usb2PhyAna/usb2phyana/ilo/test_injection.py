@@ -21,7 +21,7 @@ from .ilo import IloParams
 from .tb import Pvt, TbParams, IloSharedTb, tperiod
 from .test_dac_code import Result, result_pickle_file as dac_code_result_pickle_file
 from ..tests.sim_options import sim_options
-from ..tests.sim_test_mode import SimTestMode, SimTest
+from ..tests.sim_test_mode import SimTest
 
 
 def best_dac_code(result: Result, pvt: Pvt) -> int:
@@ -68,17 +68,6 @@ def IloInjectionTb(params: TbParams) -> h.Module:
     return tb
 
 
-# def test_ilo_injection(simtestmode: SimTestMode):
-#     """Ilo Injection Test(s)"""
-#     if simtestmode in (SimTestMode.MIN, SimTestMode.NETLIST):
-#         # In min-mode just netlist
-#         params = TbParams(pvt=Pvt(), ilo=IloParams(), code=1)
-#         h.netlist(IloInjectionTb(params), dest=io.StringIO())
-#     else:
-#         # And in any other mode run simulation
-#         sim_ilo_injection()
-
-
 def sim_ilo_injection():
     pvt = Pvt()
 
@@ -89,12 +78,14 @@ def sim_ilo_injection():
     dac_code = 11
 
     params = TbParams(pvt=pvt, ilo=IloParams(), code=dac_code)
+    tb_ = IloInjectionTb(params)
+    h.pdk.compile(tb_)
 
     # Create some simulation stimulus
     @hs.sim
     class IloSim:
         # The testbench
-        tb = IloInjectionTb(params)
+        tb = tb_
 
         # Our sole analysis: transient, for much longer than we need.
         # But auto-stopping when measurements complete.

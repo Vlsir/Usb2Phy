@@ -2,8 +2,6 @@
 # High-Speed RX Tests
 """
 
-import io
-
 # Hdl Imports
 import hdl21 as h
 import hdl21.sim as hs
@@ -15,13 +13,12 @@ from hdl21.primitives import Vdc, Vpulse, Idc, C
 import s130
 import sitepdks as _
 
+# Local Imports
 from ...tests.sim_options import sim_options
 from ...tests.supplyvals import SupplyVals
 from ...tests.diffclockgen import DiffClkGen
 from ...tests.vcode import Vcode
-from ...tests.sim_test_mode import SimTestMode
-
-# DUT Imports
+from ...tests.sim_test_mode import SimTest
 from ..hsrx import HsRx
 from ...ilo import IloParams
 
@@ -85,15 +82,21 @@ def HsRxTb(params: TbParams) -> h.Module:
     ## High-Speed RX DUT
     tb.dut = HsRx(h.Default)(
         pads=pads,
-        sck=sck,
-        sdata=sdata,
-        fctrl=fctrl,
-        cdr_en=VDD18,
-        pbias_cdr_120u=pbias_cdr_120u,
-        pbias_preamp_200u=pbias_preamp_200u,
-        VDD18=VDD18,
-        VDD33=VDD33,
-        VSS=tb.VSS,
+        dig=h.bundlize(
+            sck=sck,
+            sdata=sdata,
+            fctrl=fctrl,
+            cdr_en=VDD18,
+        ),
+        bias=h.bundlize(
+            pbias_cdr_120u=pbias_cdr_120u,
+            pbias_preamp_200u=pbias_preamp_200u,
+        ),
+        SUPPLIES=h.bundlize(
+            VDD18=VDD18,
+            VDD33=VDD33,
+            VSS=tb.VSS,
+        ),
     )
 
     return tb
@@ -131,11 +134,17 @@ def sim_hsrx():
     print(results)
 
 
-def test_hsrx(simtestmode: SimTestMode):
-    """High Speed RX Tests"""
+class TestHsRx(SimTest):
+    """High-Speed RX Test(s)"""
 
-    if simtestmode in (SimTestMode.MIN, SimTestMode.NETLIST):
-        # Just run elaboration & netlisting
-        h.netlist(HsRx(h.Default), dest=io.StringIO())
-    else:
-        sim_hsrx()
+    tbgen = HsRxTb
+
+    def min(self):
+        return self.netlist()
+
+    def typ(self):
+        return sim_hsrx()
+
+    def max(self):
+        # FIXME: add corner runs
+        raise NotImplementedError

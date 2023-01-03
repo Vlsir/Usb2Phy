@@ -15,7 +15,7 @@ from .. import Usb2PhyAna, AnaDigBundle
 from ..phyroles import PhyRoles
 from ..supplies import PhySupplies
 from ..other import PhyBias
-from .sim_test_mode import SimTestMode
+from .sim_test_mode import SimTest
 from ..tests.sim_options import sim_options
 
 
@@ -91,14 +91,17 @@ def sim_phy():
     print(results)
 
 
-def test_phy(simtestmode: SimTestMode):
-    """PHY top-level test"""
+class TestPhy(SimTest):
+    """PHY Top-Level Tests"""
 
-    phy = Usb2PhyAna()
-    h.elaborate(phy)
-    h.elaborate(phy)
+    tbgen = PhyTb
 
-    if simtestmode == SimTestMode.NETLIST:
-        h.netlist(phy, dest=io.StringIO(), fmt="spectre")
-    else:
-        sim_phy()
+    def min(self):
+        return self.netlist()
+
+    def typ(self):
+        return sim_phy()
+
+    def max(self):
+        # FIXME: add corner runs
+        raise NotImplementedError

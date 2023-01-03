@@ -2,41 +2,45 @@
 # Injection Locked Oscillator
 """
 
-from enum import Enum
-
 # Hdl & PDK Imports
 import hdl21 as h
 from hdl21.prefix import f
 from hdl21.primitives import C
 from hdl21 import Pair, Diff, inverse
 
+import s130
+from s130 import MosParams
+
 # Local Imports
-from ..tetris.mos import Nmos
-from ..logiccells import Inv
 from ..idac.pmos_cascode_idac import PmosIdac
+from ..width import Width
 from ..supplies import PhySupplies
 
 
-@h.bundle
-class OctalClock:
-    """# Octal Clock
-    Eight stages comprised of four differential pairs."""
-
-    class Roles(Enum):
-        # Clock roles: source or sink
-        SOURCE = "SOURCE"
-        SINK = "SINK"
-
-    # The four quadrature phases, all driven by SOURCE and consumed by SINK.
-    stg0 = h.Diff(src=Roles.SOURCE, dest=Roles.SINK)
-    stg1 = h.Diff(src=Roles.SOURCE, dest=Roles.SINK)
-    stg2 = h.Diff(src=Roles.SOURCE, dest=Roles.SINK)
-    stg3 = h.Diff(src=Roles.SOURCE, dest=Roles.SINK)
+Pmos = s130.modules.pmos
+Nmos = s130.modules.nmos
 
 
 @h.paramclass
 class IloParams:
     cl = h.Param(dtype=h.Prefixed, desc="Capacitance Load", default=10 * f)
+
+
+@h.generator
+def IloInv(p: Width) -> h.Module:
+    """# Injection Locked Oscillator Inverter"""
+
+    @h.module
+    class IloInv:
+        # IO
+        VDD, VSS = h.Ports(2)
+        i = h.Input()
+        o = h.Output()
+        # Internal Implementation
+        nmos = Nmos(MosParams(m=p.width))(g=i, d=o, s=VSS, b=VSS)
+        pmos = Pmos(MosParams(m=p.width))(g=i, d=o, s=VDD, b=VDD)
+
+    return IloInv
 
 
 @h.generator
@@ -55,9 +59,9 @@ def IloStage(params: IloParams) -> h.Module:
 
         # Internal Implementation
         ## Forward Inverters
-        fwd = Pair(Inv(x=16))(i=inp, z=out, VDD=VDD, VSS=VSS)
+        fwd = Pair(IloInv(width=16))(i=inp, o=out, VDD=VDD, VSS=VSS)
         ## Cross-Coupled Output Inverters
-        cross = Pair(Inv(x=4))(i=out, z=inverse(out), VDD=VDD, VSS=VSS)
+        cross = Pair(IloInv(width=4))(i=out, o=inverse(out), VDD=VDD, VSS=VSS)
         ## Load Caps
         cl = Pair(C(c=params.cl))(p=out, n=VSS)
 
@@ -67,35 +71,39 @@ def IloStage(params: IloParams) -> h.Module:
 @h.generator
 def IloRing(params: IloParams) -> h.Module:
     """# ILO Ring Oscillator"""
-    Ninj = Nmos(npar=2)
+    Ninj = Nmos(m=2)
 
     @h.module
     class IloRing:
         # IO
         VDD, VSS = h.Ports(2)
-        inj = h.Input(desc="Injection Input")
-        cko = OctalClock(port=True, role=OctalClock.Roles.SOURCE)
+        inj = h.Input()
 
         # Internal Implementation
+        stg0 = Diff(port=True, role=Diff.Roles.SOURCE)
+        stg1 = Diff(port=True, role=Diff.Roles.SOURCE)
+        stg2 = Diff(port=True, role=Diff.Roles.SOURCE)
+        stg3 = Diff(port=True, role=Diff.Roles.SOURCE)
+
         ## Delay Stages
-        i0 = IloStage(params)(inp=cko.stg0, out=cko.stg1, VDD=VDD, VSS=VSS)
-        i1 = IloStage(params)(inp=cko.stg1, out=cko.stg2, VDD=VDD, VSS=VSS)
-        i2 = IloStage(params)(inp=cko.stg2, out=cko.stg3, VDD=VDD, VSS=VSS)
-        i3 = IloStage(params)(inp=cko.stg3, out=inverse(cko.stg0), VDD=VDD, VSS=VSS)
+        i0 = IloStage(params)(inp=stg0, out=stg1, VDD=VDD, VSS=VSS)
+        i1 = IloStage(params)(inp=stg1, out=stg2, VDD=VDD, VSS=VSS)
+        i2 = IloStage(params)(inp=stg2, out=stg3, VDD=VDD, VSS=VSS)
+        i3 = IloStage(params)(inp=stg3, out=inverse(stg0), VDD=VDD, VSS=VSS)
 
         ## Injection Nmos Switches
-        n0 = Ninj(g=inj, d=cko.stg0.p, s=cko.stg0.n, VSS=VSS, VDD=VDD)
-        n1 = Ninj(g=VSS, d=cko.stg1.p, s=cko.stg1.n, VSS=VSS, VDD=VDD)
-        n2 = Ninj(g=VSS, d=cko.stg2.p, s=cko.stg2.n, VSS=VSS, VDD=VDD)
-        n3 = Ninj(g=VSS, d=cko.stg3.p, s=cko.stg3.n, VSS=VSS, VDD=VDD)
-        np0 = Ninj(g=VSS, d=cko.stg0.p, s=VSS, VSS=VSS, VDD=VDD)
-        np1 = Ninj(g=inj, d=cko.stg1.p, s=VSS, VSS=VSS, VDD=VDD)
-        np2 = Ninj(g=inj, d=cko.stg2.p, s=VSS, VSS=VSS, VDD=VDD)
-        np3 = Ninj(g=inj, d=cko.stg3.p, s=VSS, VSS=VSS, VDD=VDD)
-        nn0 = Ninj(g=VSS, d=cko.stg0.n, s=VSS, VSS=VSS, VDD=VDD)
-        nn1 = Ninj(g=VSS, d=cko.stg1.n, s=VSS, VSS=VSS, VDD=VDD)
-        nn2 = Ninj(g=VSS, d=cko.stg2.n, s=VSS, VSS=VSS, VDD=VDD)
-        nn3 = Ninj(g=VSS, d=cko.stg3.n, s=VSS, VSS=VSS, VDD=VDD)
+        n0 = Ninj(g=inj, d=stg0.p, s=stg0.n, b=VSS)
+        n1 = Ninj(g=VSS, d=stg1.p, s=stg1.n, b=VSS)
+        n2 = Ninj(g=VSS, d=stg2.p, s=stg2.n, b=VSS)
+        n3 = Ninj(g=VSS, d=stg3.p, s=stg3.n, b=VSS)
+        np0 = Ninj(g=VSS, d=stg0.p, s=VSS, b=VSS)
+        np1 = Ninj(g=inj, d=stg1.p, s=VSS, b=VSS)
+        np2 = Ninj(g=inj, d=stg2.p, s=VSS, b=VSS)
+        np3 = Ninj(g=inj, d=stg3.p, s=VSS, b=VSS)
+        nn0 = Ninj(g=VSS, d=stg0.n, s=VSS, b=VSS)
+        nn1 = Ninj(g=VSS, d=stg1.n, s=VSS, b=VSS)
+        nn2 = Ninj(g=VSS, d=stg2.n, s=VSS, b=VSS)
+        nn3 = Ninj(g=VSS, d=stg3.n, s=VSS, b=VSS)
 
     return IloRing
 
@@ -108,7 +116,7 @@ def IloInner(params: IloParams) -> h.Module:
     class IloInner:
         # IO
         SUPPLIES = PhySupplies(port=True)
-        inj = h.Input(desc="Injection Input")
+        inj = h.Input()
         pbias = h.Input()
         fctrl = h.Input(width=5)
 
@@ -134,12 +142,10 @@ def IloInner(params: IloParams) -> h.Module:
         ## Core Ring
         ring = IloRing(params)(
             inj=inj,
-            cko=h.bundlize(
-                stg0=stg0,
-                stg1=stg1,
-                stg2=stg2,
-                stg3=stg3,
-            ),
+            stg0=stg0,
+            stg1=stg1,
+            stg2=stg2,
+            stg3=stg3,
             VDD=ring_top,
             VSS=SUPPLIES.VSS,
         )
@@ -155,7 +161,7 @@ def Ilo(params: IloParams) -> h.Module:
     class Ilo:
         # IO
         SUPPLIES = PhySupplies(port=True)
-        inj = h.Input(desc="Injection Input")
+        inj = h.Input()
         pbias = h.Input()
         fctrl = h.Input(width=5)
         sck = h.Output(desc="Serial Output Clock")

@@ -4,19 +4,19 @@
 
 from typing import Optional
 
-# Hdl & PDK Imports
+# Hdl Imports
 import hdl21 as h
 import hdl21.sim as hs
 from hdl21.pdk import Corner
-from hdl21.prefix import m, µ, f, n, T, PICO
-from hdl21.primitives import Vdc, Vpulse, Idc
+from hdl21.prefix import m, µ, n, PICO
+
+# PDK Imports
 import s130
 import sitepdks as _
 
+# Local Imports
 from ..tests.supplyvals import SupplyVals
 from ..tests.vcode import Vcode
-
-# DUT Imports
 from .ilo import IloInner, IloParams
 
 
@@ -50,8 +50,8 @@ def IloSharedTb(params: TbParams, name: Optional[str] = None) -> h.Module:
     supplyvals = SupplyVals.corner(params.pvt.v)
     tb.VDDA33 = VDDA33 = h.Signal()
     tb.VDD18 = VDD18 = h.Signal()
-    tb.vvdd18 = Vdc(dc=supplyvals.VDD18, ac=0 * m)(p=VDD18, n=tb.VSS)
-    tb.vvdd33 = Vdc(dc=supplyvals.VDDA33, ac=0 * m)(p=VDDA33, n=tb.VSS)
+    tb.vvdd18 = h.Vdc(dc=supplyvals.VDD18)(p=VDD18, n=tb.VSS)
+    tb.vvdd33 = h.Vdc(dc=supplyvals.VDDA33)(p=VDDA33, n=tb.VSS)
 
     # Create the test-bench level delay stage signals
     tb.stg0 = stg0 = h.Diff()
@@ -62,7 +62,7 @@ def IloSharedTb(params: TbParams, name: Optional[str] = None) -> h.Module:
     # Bias Generation
     tb.pbias = pbias = h.Signal()
     # Pmos Side Bias
-    tb.ii = Idc(Idc.Params(dc=1 * params.ib))(p=pbias, n=tb.VSS)
+    tb.ii = h.Idc(dc=1 * params.ib)(p=pbias, n=tb.VSS)
 
     # Frequency Control Dac Code
     tb.fctrl = fctrl = h.Signal(width=5)
@@ -99,7 +99,7 @@ def IloFreqTb(params: TbParams) -> h.Module:
     tb = IloSharedTb(params=params, name="IloFreqTb")
 
     # Create the injection-pulse source, which in this bench serves entirely as a kick-start
-    tb.vinj = Vpulse(
+    tb.vinj = h.Vpulse(
         v1=1800 * m,
         v2=0 * m,
         period=1001 * m,  # "Infinite" period
@@ -115,15 +115,19 @@ def IloFreqTb(params: TbParams) -> h.Module:
 def sim_input(tbgen: h.Generator, params: TbParams) -> hs.Sim:
     """Ilo Frequency Sim"""
 
+    tb_ = tbgen(params)
+    s130.compile(tb_)
+
     # Create some simulation stimulus
     @hs.sim
     class IloSim:
         # The testbench
-        tb = tbgen(params)
+        tb = tb_
 
         # Our sole analysis: transient, for much longer than we need.
         # But auto-stopping when measurements complete.
         tr = hs.Tran(tstop=500 * n)
+        op = hs.Op()
 
         # Measurements
         trise5 = hs.Meas(tr, expr="when 'V(xtop.stg0_p)-V(xtop.stg0_n)'=0 rise=5")

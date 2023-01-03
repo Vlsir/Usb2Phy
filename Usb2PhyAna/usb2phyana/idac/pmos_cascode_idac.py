@@ -59,7 +59,7 @@ def PmosIdac(_: h.HasNoParams) -> h.Module:
 
         # Internal Implementation
         codeb = h.Signal(width=5)
-        code_invs = 5 * Inv(i=code, z=codeb, VDD=VDD18, VSS=VSS)
+        code_invs = 5 * Inv()(i=code, z=codeb, VDD=VDD18, VSS=VSS)
 
         ## Diode Connected Bias Unit
         pbias = h.Signal()

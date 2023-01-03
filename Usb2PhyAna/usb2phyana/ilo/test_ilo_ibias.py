@@ -11,19 +11,18 @@ from pydantic.dataclasses import dataclass
 import numpy as np
 import matplotlib.pyplot as plt
 
-# Hdl & PDK Imports
+# Hdl Imports
 import hdl21 as h
 import hdl21.sim as hs
 from hdl21.pdk import Corner
-from hdl21.sim import Sim, LogSweep
-from hdl21.prefix import m, µ, f, n, T, PICO
-from hdl21.primitives import Vdc, Vpulse, Idc, C
-import s130
+from hdl21.prefix import µ
+
+# PDK Imports
 import sitepdks as _
 
+# Local Imports
 from ..tests.sim_options import sim_options
-
-# DUT Imports
+from ..tests.sim_test_mode import SimTest
 from .tb import Pvt, TbParams, IloFreqTb, sim_input
 
 
@@ -143,17 +142,19 @@ def run_and_plot_corners():
     plot(result, "Cmos Ilo Freq vs Ibias", "scratch/CmosIloFreqIbias.png")
 
 
-from ..tests.sim_test_mode import SimTestMode
+class TestIloFreqVsIbias(SimTest):
+    """Ilo Frequency vs Ibias Test(s)"""
 
+    tbgen = IloFreqTb
 
-def test_ilo_freq(simtestmode: SimTestMode):
-    """Ilo Frequence Test(s)"""
+    def default_params(self):
+        return IloFreqTb.Params(pvt=Pvt(), ib=200 * µ)
 
-    if simtestmode == SimTestMode.NETLIST:
-        h.netlist(IloFreqTb(pvt=Pvt(), ib=200 * µ), dest=io.StringIO())
-    elif simtestmode == SimTestMode.MIN:
-        run_one()
-    elif simtestmode == SimTestMode.TYP:
-        ibias_sweep(pvt=Pvt())
-    else:
-        run_and_plot_corners()
+    def min(self):
+        return run_one()
+
+    def typ(self):
+        return ibias_sweep(pvt=Pvt())
+
+    def max(self):
+        return run_and_plot_corners()

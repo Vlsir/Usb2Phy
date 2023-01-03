@@ -1,5 +1,5 @@
 import io
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 # PyPi Imports
 import numpy as np
@@ -11,7 +11,7 @@ import hdl21.sim as hs
 from hdl21.pdk import Corner
 from hdl21.sim import Sim, LinearSweep
 from hdl21.prefix import m, µ, UNIT
-from hdl21.primitives import MosType, Vdc
+from hdl21.primitives import MosType, Vdc, Nmos, Pmos
 
 # PDK Imports
 import sitepdks as _
@@ -37,13 +37,40 @@ def test_pdk(simtestmode: SimTestMode):
         VSS = h.Port()  # The testbench interface: sole port VSS
 
         VDD = h.Signal()
-        v = Vdc(Vdc.Params(dc=1800 * m, ac=0 * m))(p=VDD, n=VSS)
+        v = Vdc(dc=1800 * m)(p=VDD, n=VSS)
 
         inmos = nmos(MosParams())(d=VDD, g=VDD, s=VSS, b=VSS)
         inmos_lvt = nmos_lvt(MosParams())(d=VDD, g=VDD, s=VSS, b=VSS)
         ipmos = pmos(MosParams())(d=VSS, g=VSS, s=VDD, b=VDD)
         ipmos_hvt = pmos_hvt(MosParams())(d=VSS, g=VSS, s=VDD, b=VDD)
         ipmos_v5 = pmos_v5(IoMosParams())(d=VSS, g=VSS, s=VDD, b=VDD)
+
+    if simtestmode == SimTestMode.NETLIST:
+        h.netlist(Tb, dest=io.StringIO())
+    else:
+        sim = Sim(tb=Tb, attrs=s130.install.include(Corner.TYP))
+        sim.tran(tstop=1 * µ, name="tran1")
+        sim.run(sim_options)
+
+def test_pdk_compile(simtestmode: SimTestMode):
+    """Non-PHY test that we can execute simulations with the installed PDK"""
+
+    @h.module
+    class Tb:
+        VSS = h.Port()  # The testbench interface: sole port VSS
+
+        VDD = h.Signal()
+        v = Vdc(dc=1800 * m)(p=VDD, n=VSS)
+
+        # Instantiate hdl21.primitives Generic Devices
+        inmos = Nmos()(d=VDD, g=VDD, s=VSS, b=VSS)
+        inmos_lvt = Nmos(vth=h.MosVth.LOW)(d=VDD, g=VDD, s=VSS, b=VSS)
+        ipmos = Pmos()(d=VSS, g=VSS, s=VDD, b=VDD)
+        ipmos_hvt = Pmos(vth=h.MosVth.HIGH)(d=VSS, g=VSS, s=VDD, b=VDD)
+        ipmos_v5 = Pmos(model="v5")(d=VSS, g=VSS, s=VDD, b=VDD)
+
+    # Compile it into the target in-memory PDK
+    h.pdk.compile(Tb)
 
     if simtestmode == SimTestMode.NETLIST:
         h.netlist(Tb, dest=io.StringIO())
@@ -90,7 +117,7 @@ def iv(mosdut: MosDut) -> hs.SimResult:
 
         mos = mosdut.mos(s=VSS, b=VSS)  # The transistor under test
         vd = Vdc(dc="polarity * vds")(p=mos.d, n=VSS)
-        vg = Vdc(dc="polarity * vgs", ac=1 * UNIT)(p=mos.g, n=VSS)
+        vg = Vdc(dc="polarity * vgs", ac=1)(p=mos.g, n=VSS)
 
     @hs.sim
     class MosIvSim:
@@ -124,5 +151,5 @@ def postprocess(dut: MosDut, result: hs.SimResult) -> None:
     ax2.set_ylabel("Id (µA)")
     ax2.set_yscale("log")
     ax.grid()
-    fig.savefig(f"scratch/gm_over_id.{dut.dut.name}.png")
+    fig.savefig(f"scratch/gm_over_id.{dut.mos.name}.png")
     # np.save("scratch/gm_over_id.npy", gm_over_id)

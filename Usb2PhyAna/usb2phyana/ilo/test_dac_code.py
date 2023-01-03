@@ -5,7 +5,7 @@
 import pickle, io
 from pathlib import Path
 from typing import List
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from copy import copy
 
 from pydantic.dataclasses import dataclass
@@ -16,7 +16,6 @@ import matplotlib.pyplot as plt
 import hdl21 as h
 import hdl21.sim as hs
 from hdl21.pdk import Corner
-from hdl21.prefix import m, µ, f, K
 
 # Local Imports
 from .tb import IloFreqTb, Pvt, TbParams, sim_input
@@ -173,9 +172,10 @@ def run_one() -> hs.SimResult:
     """Run a typical-case, mid-code sim"""
 
     print("Running Typical Conditions")
-    opts = copy(sim_options)
-    params = TbParams()
-    sim_result = sim_input(IloFreqTb, params).run(opts)
+    sim_result = sim_input(IloFreqTb, TbParams()).run(
+        replace(sim_options, rundir="./scratch")
+    )
+    print(sim_result.an[1].data)
     summary = SingleSimSummary.build(sim_result)
     print("Typical Condition Results:")
     print(summary)
