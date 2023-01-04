@@ -11,12 +11,14 @@ from pydantic.dataclasses import dataclass
 import numpy as np
 import matplotlib.pyplot as plt
 
-# Hdl & PDK Imports
+# Hdl Imports
 import hdl21 as h
 import hdl21.sim as hs
 from hdl21.pdk import Corner
 from hdl21.prefix import µ, m
 from hdl21.primitives import Vdc, Idc
+
+# PDK Imports
 import s130
 import sitepdks as _
 
@@ -60,8 +62,8 @@ def IdacSweepTb(params: TbParams) -> h.Module:
     supplyvals = SupplyVals.corner(params.pvt.v)
     tb.VDDA33 = VDDA33 = h.Signal()
     tb.VDD18 = VDD18 = h.Signal()
-    tb.vvdd18 = Vdc(dc=supplyvals.VDD18, ac=0 * m)(p=VDD18, n=tb.VSS)
-    tb.vvdd33 = Vdc(dc=supplyvals.VDDA33, ac=0 * m)(p=VDDA33, n=tb.VSS)
+    tb.vvdd18 = Vdc(dc=supplyvals.VDD18)(p=VDD18, n=tb.VSS)
+    tb.vvdd33 = Vdc(dc=supplyvals.VDDA33)(p=VDDA33, n=tb.VSS)
 
     # Bias Generation
     tb.ibias = ibias = h.Signal()
@@ -78,7 +80,7 @@ def IdacSweepTb(params: TbParams) -> h.Module:
     # tb.out, tb.pbias = out, pbias = h.Signals(2)
     # tb.pload = Pbias(g=pbias, d=pbias, s=VDD, b=VDD)
     tb.out = out = h.Signal()
-    tb.vout = Vdc(dc=0 * m, ac=0 * m)(p=out, n=tb.VSS)
+    tb.vout = Vdc(dc=0 * m)(p=out, n=tb.VSS)
 
     # Create the DUT
     tb.dut = PmosIdac()(

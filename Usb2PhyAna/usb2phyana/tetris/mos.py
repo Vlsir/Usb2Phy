@@ -2,7 +2,7 @@ from dataclasses import replace
 
 import hdl21 as h
 from hdl21.prefix import n
-from hdl21.generators import Nmos as NmosGen, Pmos as PmosGen
+from hdl21.generators import Nmos as NmosGen, Pmos as PmosGen, MosParams as GenMosParams
 
 
 @h.paramclass
@@ -12,13 +12,13 @@ class TetrisMosParams:
 
 
 # The single device size gets encoded right here:
-NMOS_PARAMS = NmosGen.Params(
+NMOS_PARAMS = GenMosParams(
     w=820 * n,
     l=150 * n,
     tp=h.MosType.NMOS,
     vth=h.MosVth.STD,
 )
-PMOS_PARAMS = PmosGen.Params(
+PMOS_PARAMS = GenMosParams(
     w=820 * n,
     l=150 * n,
     tp=h.MosType.PMOS,

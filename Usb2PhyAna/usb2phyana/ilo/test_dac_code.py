@@ -168,27 +168,21 @@ def tperiod(results: hs.SimResult) -> float:
     return results.an[0].measurements["tperiod"]
 
 
-def run_one() -> hs.SimResult:
-    """Run a typical-case, mid-code sim"""
-
-    print("Running Typical Conditions")
-    sim_result = sim_input(IloFreqTb, TbParams()).run(
-        replace(sim_options, rundir="./scratch")
-    )
-    print(sim_result.an[1].data)
-    summary = SingleSimSummary.build(sim_result)
-    print("Typical Condition Results:")
-    print(summary)
-
-
 class TestIloDacCode(SimTest):
     """Cmos Ilo Dac Code vs Frequence Test(s)"""
 
     tbgen = IloFreqTb
 
     def min(self):
-        """Run a single code at typical conditions"""
-        run_one()
+        """Run a typical-case, mid-code sim"""
+
+        print("Running Typical Conditions")
+        opts = replace(sim_options, rundir="./scratch")
+        sim_result = sim_input(IloFreqTb, TbParams()).run(opts)
+        print(sim_result.an[1].data)
+        summary = SingleSimSummary.build(sim_result)
+        print("Typical Condition Results:")
+        print(summary)
 
     def typ(self):
         """Sweep DAC codes at typical PVT conditions"""
