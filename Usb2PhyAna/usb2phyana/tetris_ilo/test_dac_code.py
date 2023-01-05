@@ -137,10 +137,12 @@ def sim_input(params: TbParams) -> hs.Sim:
 
         # Measurements
         trise5 = hs.Meas(
-            tr, expr="when 'V(xtop.wrapper.cko_stg0_p)-V(xtop.wrapper.cko_stg0_n)'=0 rise=25"
+            tr,
+            expr="when 'V(xtop.wrapper.cko_stg0_p)-V(xtop.wrapper.cko_stg0_n)'=0 rise=25",
         )
         trise15 = hs.Meas(
-            tr, expr="when 'V(xtop.wrapper.cko_stg0_p)-V(xtop.wrapper.cko_stg0_n)'=0 rise=35"
+            tr,
+            expr="when 'V(xtop.wrapper.cko_stg0_p)-V(xtop.wrapper.cko_stg0_n)'=0 rise=35",
         )
         tperiod = hs.Meas(tr, expr="param='(trise15-trise5)/10'")
         idd = hs.Meas(tr, expr="avg I(xtop.vvdd18) from=trise5 to=trise15")

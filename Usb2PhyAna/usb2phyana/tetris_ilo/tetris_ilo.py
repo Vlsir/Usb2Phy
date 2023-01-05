@@ -101,9 +101,6 @@ def IloRing(params: IloParams) -> h.Module:
 
 
 @h.generator
-
-
-
 def IloLevelShifters(params: IloParams) -> h.Module:
     """# Injection Locked Oscillator"""
 
