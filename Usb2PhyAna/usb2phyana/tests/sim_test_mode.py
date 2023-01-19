@@ -4,6 +4,11 @@ from typing import Optional
 
 import hdl21 as h
 
+# Set the default PDK to `s130`, in case others are in memory
+import s130
+
+h.pdk.set_default(s130.pdk)
+
 
 class SimTestMode(Enum):
     """

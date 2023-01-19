@@ -1,3 +1,7 @@
+"""
+# "Tetris" Mos-Stack Module Generators
+"""
+
 from dataclasses import replace
 
 import hdl21 as h
@@ -7,6 +11,8 @@ from hdl21.generators import Nmos as NmosGen, Pmos as PmosGen, MosParams as GenM
 
 @h.paramclass
 class TetrisMosParams:
+    """# Tetris Mos Stack Parameters"""
+
     nser = h.Param(dtype=int, desc="Number of series fingers", default=1)
     npar = h.Param(dtype=int, desc="Number of parallel stacks", default=1)
 
@@ -15,14 +21,16 @@ class TetrisMosParams:
 NMOS_PARAMS = GenMosParams(
     w=820 * n,
     l=150 * n,
-    tp=h.MosType.NMOS,
     vth=h.MosVth.STD,
 )
 PMOS_PARAMS = GenMosParams(
     w=820 * n,
     l=150 * n,
-    tp=h.MosType.PMOS,
     vth=h.MosVth.HIGH,
+)
+DUMMY_PARAMS = GenMosParams(
+    w=420 * n,
+    l=150 * n,
 )
 
 
@@ -30,14 +38,16 @@ PMOS_PARAMS = GenMosParams(
 def Nmos(params: TetrisMosParams) -> h.Module:
     """# Nmos Module Generator"""
 
-    if params.nser not in (1, 2, 4, 8, 16):
+    if params.nser not in (1, 2, 4, 8, 16, 32, 64):
         msg = f"Invalid {params} must be (1, 2, 4, 8, or 16) series instances"
         raise ValueError(msg)
 
     # Series-stack our Nmos by replacing its `nser` param
     n = NmosGen(replace(NMOS_PARAMS, nser=params.nser, npar=params.npar))
     # And similarly create our dummy Pmos by replacing its `npar` param
-    p = PmosGen(replace(PMOS_PARAMS, nser=1, npar=params.nser * params.npar))
+    p = PmosGen(
+        replace(DUMMY_PARAMS, vth=h.MosVth.HIGH, nser=1, npar=params.nser * params.npar)
+    )
 
     # Create our module which instantiates them
     m = module_inner()
@@ -53,14 +63,16 @@ def Nmos(params: TetrisMosParams) -> h.Module:
 def Pmos(params: TetrisMosParams) -> h.Module:
     """# Pmos Module Generator"""
 
-    if params.nser not in (1, 2, 4, 8, 16):
+    if params.nser not in (1, 2, 4, 8, 16, 32, 64):
         msg = f"Invalid {params} must be (1, 2, 4, 8, or 16) series instances"
         raise ValueError(msg)
 
     # Series-stack our Pmos by replacing its `nser` param
     p = PmosGen(replace(PMOS_PARAMS, nser=params.nser, npar=params.npar))
     # And similarly create our dummy Nmos by replacing its `npar` param
-    n = NmosGen(replace(NMOS_PARAMS, nser=1, npar=params.nser * params.npar))
+    n = NmosGen(
+        replace(DUMMY_PARAMS, vth=h.MosVth.STD, nser=1, npar=params.nser * params.npar)
+    )
 
     # Create our module which instantiates them
     m = module_inner()

@@ -4,7 +4,6 @@
 """
 
 import hdl21 as h
-from hdl21.prefix import m
 from ..tetris.mos import Nmos, Pmos
 
 
@@ -35,12 +34,12 @@ def Fcasc(params: FcascParams) -> h.Module:
         outd = h.bundlize(p=outn, n=out)
         psd = h.Diff()
         nsd = h.Diff()
-        ncascg, pcascg, pbias = h.Signals(3)
+        pcascg, pbias = h.Signals(2)
 
         ## Output Folded Stack
         ptop = h.Pair(Pbias(x=2))(g=outn, d=psd, s=VDD, VDD=VDD, VSS=VSS)
         pcasc = h.Pair(Pcasc)(g=pcascg, s=psd, d=outd, VDD=VDD, VSS=VSS)
-        ncasc = h.Pair(Ncasc)(g=ncascg, s=nsd, d=outd, VDD=VDD, VSS=VSS)
+        ncasc = h.Pair(Ncasc)(g=ibias2, s=nsd, d=outd, VDD=VDD, VSS=VSS)
         nbot = h.Pair(Nbias(x=2))(g=ibias1, d=nsd, s=VSS, VDD=VDD, VSS=VSS)
 
         ## Nmos Input Pair
@@ -52,25 +51,22 @@ def Fcasc(params: FcascParams) -> h.Module:
         pin = h.Pair(Pmos(nser=1, npar=4))(g=inp, d=nsd, s=pin_bias.d, VDD=VDD, VSS=VSS)
 
         ## Bias Tree
-        ### Nmos Cascode Gate Generator, with a cheater voltage source
-        ncdiode = Ncasc(g=ibias2, d=ibias2, VDD=VDD, VSS=VSS)
-        ncasc_magic_vdc = h.Vdc(dc=200 * m)(p=ncdiode.s, n=VSS)
-        ncascg_short = h.Vdc(dc=0)(p=ibias2, n=ncascg)
+        ### Nmos Cascode Gate Generator, with series-Nmos "resistor"
+        ncdiode = Nmos(nser=32)(g=ibias2, d=ibias2, s=VSS, VDD=VDD, VSS=VSS)
 
         ### Bottom Nmos Diode (with cascode)
-        ndiode_casc = Ncasc(g=ncascg, d=ibias1, VDD=VDD, VSS=VSS)
+        ndiode_casc = Ncasc(g=ibias2, d=ibias1, VDD=VDD, VSS=VSS)
         ndiode = Nbias(x=1)(g=ibias1, d=ndiode_casc.s, s=VSS, VDD=VDD, VSS=VSS)
 
         ### Nmos Mirror to Pmos Cascode Bias
-        n1casc = Ncasc(g=ncascg, d=pcascg, VDD=VDD, VSS=VSS)
+        n1casc = Ncasc(g=ibias2, d=pcascg, VDD=VDD, VSS=VSS)
         n1src = Nbias(x=1)(g=ibias1, d=n1casc.s, s=VSS, VDD=VDD, VSS=VSS)
 
         ### Pmos cascode bias, with magic voltage source
-        pcdiode = Pcasc(g=pcascg, d=pcascg, VDD=VDD, VSS=VSS)
-        pcasc_magic_vdc = h.Vdc(dc=200 * m)(p=VDD, n=pcdiode.s)
+        pcdiode = Pmos(nser=16)(g=pcascg, d=pcascg, s=VDD, VDD=VDD, VSS=VSS)
 
         ### Nmos Mirror to top Pmos Bias
-        n2casc = Ncasc(g=ncascg, d=pbias, VDD=VDD, VSS=VSS)
+        n2casc = Ncasc(g=ibias2, d=pbias, VDD=VDD, VSS=VSS)
         n2src = Nbias(x=1)(g=ibias1, d=n2casc.s, s=VSS, VDD=VDD, VSS=VSS)
 
         ### Top Pmos Bias

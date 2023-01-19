@@ -2,6 +2,8 @@
 # Injection Locked Oscillator
 """
 
+from enum import Enum
+
 # Hdl & PDK Imports
 import hdl21 as h
 from hdl21.prefix import f
@@ -19,6 +21,23 @@ from ..supplies import PhySupplies
 
 Pmos = s130.modules.pmos
 Nmos = s130.modules.nmos
+
+
+@h.bundle
+class OctalClock:
+    """# Octal Clock
+    Eight stages comprised of four differential pairs."""
+
+    class Roles(Enum):
+        # Clock roles: source or sink
+        SOURCE = "SOURCE"
+        SINK = "SINK"
+
+    # The four quadrature phases, all driven by SOURCE and consumed by SINK.
+    stg0 = h.Diff(src=Roles.SOURCE, dest=Roles.SINK)
+    stg1 = h.Diff(src=Roles.SOURCE, dest=Roles.SINK)
+    stg2 = h.Diff(src=Roles.SOURCE, dest=Roles.SINK)
+    stg3 = h.Diff(src=Roles.SOURCE, dest=Roles.SINK)
 
 
 @h.paramclass
