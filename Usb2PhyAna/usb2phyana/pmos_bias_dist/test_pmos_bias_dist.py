@@ -55,7 +55,7 @@ def Tb(params: TbParams) -> h.Module:
     return tb
 
 
-def sim_bias_dist(params: TbParams):
+def sim(params: TbParams):
     """# PmosBiasDist Sims"""
 
     # Create our parametric testbench
@@ -92,4 +92,4 @@ class Test(SimTest):
         )
 
     def typ(self):
-        return sim_bias_dist(self.default_params())
+        return sim(self.default_params())

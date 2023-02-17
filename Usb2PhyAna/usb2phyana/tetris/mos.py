@@ -19,12 +19,12 @@ class TetrisMosParams:
 
 # The single device size gets encoded right here:
 NMOS_PARAMS = GenMosParams(
-    w=820 * n,
+    w=840 * n,
     l=150 * n,
     vth=h.MosVth.STD,
 )
 PMOS_PARAMS = GenMosParams(
-    w=820 * n,
+    w=1260 * n,
     l=150 * n,
     vth=h.MosVth.HIGH,
 )
@@ -32,14 +32,25 @@ DUMMY_PARAMS = GenMosParams(
     w=420 * n,
     l=150 * n,
 )
+# List of the `nser` values supported by custom physical cells
+LAYOUT_NSERS = (1, 2, 4, 8)
 
 
 @h.generator
 def Nmos(params: TetrisMosParams) -> h.Module:
     """# Nmos Module Generator"""
 
-    if params.nser not in (1, 2, 4, 8, 16, 32, 64):
-        msg = f"Invalid {params} must be (1, 2, 4, 8, or 16) series instances"
+    if params.nser in LAYOUT_NSERS:
+        return NmosPhys(params)
+    return NmosComb(params)
+
+
+@h.generator
+def NmosPhys(params: TetrisMosParams) -> h.Module:
+    """# Versions of `Nmos` that have physical layout"""
+
+    if params.nser not in LAYOUT_NSERS:
+        msg = f"Invalid {params} must be {LAYOUT_NSERS} series instances"
         raise ValueError(msg)
 
     # Series-stack our Nmos by replacing its `nser` param
@@ -60,11 +71,17 @@ def Nmos(params: TetrisMosParams) -> h.Module:
 
 
 @h.generator
+def NmosComb(params: TetrisMosParams) -> h.Module:
+    """# Versions of `Nmos` that cascade physical `NmosPhys`"""
+    raise NotImplementedError
+
+
+@h.generator
 def Pmos(params: TetrisMosParams) -> h.Module:
     """# Pmos Module Generator"""
 
-    if params.nser not in (1, 2, 4, 8, 16, 32, 64):
-        msg = f"Invalid {params} must be (1, 2, 4, 8, or 16) series instances"
+    if params.nser not in LAYOUT_NSERS:
+        msg = f"Invalid {params} must be {LAYOUT_NSERS} series instances"
         raise ValueError(msg)
 
     # Series-stack our Pmos by replacing its `nser` param
